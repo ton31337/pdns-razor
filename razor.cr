@@ -2,12 +2,12 @@ require "redis"
 
 class Razor
 
-  def initialize(host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend", soa = "hostinger.com. hostmaster.hostinger.com. 2015123006 600 600 604800 600")
+  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend", soa = "hostinger.com. hostmaster.hostinger.com. 2015123006 600 600 604800 600")
     @types = types
     @banner = banner
     @ttl = ttl
     @soa = soa
-    @redis = Redis.new(host, port)
+    @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
   end
 
   def run!
@@ -76,4 +76,4 @@ class Razor
   end
 end
 
-Razor.new(types: %w(A AAAA)).run!
+Razor.new(types: %w(A AAAA), unixsocket: "/var/run/nutcracker/nutcracker.sock").run!
