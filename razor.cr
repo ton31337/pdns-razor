@@ -44,7 +44,8 @@ class Razor
   end
 
   private def getDataRedis(qtype, name)
-    @redis.srandmember("#{name}-#{qtype}")
+    cname = @redis.get(name)
+    @redis.srandmember("#{cname}:#{qtype}")
   end
 
   private def answer(options = {} of Symbol => String|Int32)
@@ -75,4 +76,4 @@ class Razor
   end
 end
 
-Razor.new.run!
+Razor.new(types: %w(A AAAA)).run!
