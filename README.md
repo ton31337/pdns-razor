@@ -19,15 +19,15 @@ Nominum Version 2.0.0.0
 
 Statistics:
 
-  Queries sent:         20000
-  Queries completed:    20000 (100.00%)
+  Queries sent:         40000
+  Queries completed:    40000 (100.00%)
   Queries lost:         0 (0.00%)
 
-  Response codes:       NOERROR 20000 (100.00%)
-  Average packet size:  request 25, response 85
-  Run time (s):         1.079667
-  Queries per second:   18524.230156
+  Response codes:       NOERROR 40000 (100.00%)
+  Average packet size:  request 27, response 49
+  Run time (s):         0.551791
+  Queries per second:   72491.214971
 
-  Average Latency (s):  0.005133 (min 0.000187, max 0.015157)
-  Latency StdDev (s):   0.001977
+  Average Latency (s):  0.001175 (min 0.000487, max 0.011503)
+  Latency StdDev (s):   0.000560
 ```
