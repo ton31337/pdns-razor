@@ -1,4 +1,4 @@
-require "redis"
+require "crystal-redis"
 
 class Razor
 
