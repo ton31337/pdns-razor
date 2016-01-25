@@ -2,11 +2,10 @@ require "./libs/crystal-redis/redis"
 
 class Razor
 
-  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend", soa = "hostinger.com. hostmaster.hostinger.com. 2015123006 600 600 604800 600")
+  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend")
     @types = types
     @banner = banner
     @ttl = ttl
-    @soa = soa
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
   end
 
@@ -24,7 +23,7 @@ class Razor
         options = {
           :name => name,
           :type => qtype,
-          :content => @soa
+          :content => "#{name}. hostmaster.#{name}. 2015123006 600 600 604800 600"
         }
         answer options
       when "ANY"
