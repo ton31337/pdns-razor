@@ -2,7 +2,7 @@ name: pdns_razor
 version: 0.1.0
 
 dependencies:
-  crystal-redis:
+  redis:
     git: https://github.com/stefanwille/crystal-redis.git
     version: ~> 1.2.0
 

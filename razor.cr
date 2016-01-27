@@ -1,4 +1,4 @@
-require "./libs/crystal-redis/redis"
+require "redis"
 
 class Razor
 
