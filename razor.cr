@@ -77,4 +77,4 @@ class Razor
   end
 end
 
-Razor.new(types: %w(A AAAA), unixsocket: "/var/run/nutcracker/nutcracker.sock").run!
+Razor.new(types: %w(A AAAA), unixsocket: "/var/run/nutcracker.sock").run!
