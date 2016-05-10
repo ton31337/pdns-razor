@@ -2,10 +2,11 @@ require "redis"
 
 class Razor
 
-  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend")
+  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend", default_route = "default.route")
     @types = types
     @banner = banner
     @ttl = ttl
+    @default_route = default_route
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
   end
 
@@ -28,12 +29,10 @@ class Razor
         answer options
       when "ANY"
         @types.each do |type|
-          content = getDataRedis(type, name)
-          next unless content
           options = {
             :name => name,
             :type => type,
-            :content => content
+            :content => getDataRedis(type, name)
           }
           answer options
         end
@@ -46,7 +45,7 @@ class Razor
     ifdef cname
       name = @redis.get(name)
     end
-    @redis.srandmember("#{name}:#{qtype}")
+    @redis.srandmember("#{name}:#{qtype}") || @redis.srandmember("#{@default_route}:#{qtype}")
   end
 
   private def answer(options = {} of Symbol => String|Int32)
@@ -77,4 +76,4 @@ class Razor
   end
 end
 
-Razor.new(types: %w(A AAAA), unixsocket: "/var/run/nutcracker.sock").run!
+Razor.new(types: %w(A AAAA)).run!
