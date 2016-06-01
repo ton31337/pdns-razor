@@ -2,11 +2,12 @@ require "redis"
 
 class Razor
 
-  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend", default_route = "default.route")
+  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend", default_route = "default.route", soa_domain = "000webhost.awex.io")
     @types = types
     @banner = banner
     @ttl = ttl
     @default_route = default_route
+    @soa_domain = soa_domain
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
   end
 
@@ -26,7 +27,7 @@ class Razor
           :type => qtype,
           :content => "#{name}. hostmaster.#{name}. 2015123006 600 600 604800 600"
         }
-        answer options
+        answer options if name.includes?(@soa_domain)
       when "ANY"
         @types.each do |type|
           options = {
