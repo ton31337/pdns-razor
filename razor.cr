@@ -77,4 +77,4 @@ class Razor
   end
 end
 
-Razor.new(types: %w(A AAAA)).run!
+Razor.new(types: %w(A AAAA), ttl: 60).run!
