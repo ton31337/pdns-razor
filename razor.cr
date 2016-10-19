@@ -29,12 +29,14 @@ class Razor
         answer options
       when "ANY"
         @types.each do |type|
-          options = {
-            :name => name,
-            :type => type,
-            :content => getDataRedis(type, name)
-          }
-          answer options
+          getDataRedis(type, name).each do |response|
+            options = {
+              :name => name,
+              :type => type,
+              :content => response
+            }
+            answer options
+          end
         end
       end
       finish
@@ -45,7 +47,15 @@ class Razor
     ifdef cname
       name = @redis.get(name)
     end
-    @redis.srandmember("#{name}:#{qtype}") || @redis.srandmember("#{@default_route}:#{qtype}")
+
+    case qtype
+    when "NS"
+      ns = @redis.smembers("#{name}:#{qtype}")
+      ns = @redis.smembers("#{@default_route}:#{qtype}") if ns.empty?
+      ns
+    else
+      [@redis.srandmember("#{name}:#{qtype}") || @redis.srandmember("#{@default_route}:#{qtype}")]
+    end
   end
 
   private def answer(options = {} of Symbol => String|Int32)
@@ -54,7 +64,9 @@ class Razor
       :class => "IN",
       :ttl => @ttl
     }.merge options
-    respond "DATA", options[:name], options[:class], options[:type], options[:ttl], options[:id], options[:content]
+    if options[:content]
+      respond "DATA", options[:name], options[:class], options[:type], options[:ttl], options[:id], options[:content]
+    end
   end
 
   private def respond(*args)
@@ -76,4 +88,4 @@ class Razor
   end
 end
 
-Razor.new(types: %w(A AAAA), ttl: 60, default_route: "us-east-1.route-1.000webhost.awex.io").run!
+Razor.new(types: %w(A AAAA NS), ttl: 60, default_route: "us-east-1.route-1.000webhost.awex.io").run!
