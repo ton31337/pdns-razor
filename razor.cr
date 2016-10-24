@@ -2,10 +2,9 @@ require "redis"
 
 class Razor
 
-  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), ttl = 30, banner = "Razor DNS backend", default_route = "default.route")
+  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), banner = "Razor DNS backend", default_route = "default.route")
     @types = types
     @banner = banner
-    @ttl = ttl
     @default_route = default_route
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
   end
@@ -18,12 +17,14 @@ class Razor
   def mainLoop
     loop do
       name, qtype = parseQuery STDIN.read_line
+      ttl = getTTL(name)
 
       case qtype
       when "SOA"
         options = {
           :name => name,
           :type => qtype,
+          :ttl => ttl,
           :content => "#{name}. hostmaster.#{name}. 2015123006 600 600 604800 600"
         }
         answer options
@@ -33,6 +34,7 @@ class Razor
             options = {
               :name => name,
               :type => type,
+              :ttl => ttl,
               :content => response
             }
             answer options
@@ -41,6 +43,10 @@ class Razor
       end
       finish
     end
+  end
+
+  private def getTTL(name)
+    @redis.hmget(name, "TTL").first || @redis.hmget(@default_route, "TTL").first || 60
   end
 
   private def getDataRedis(qtype, name)
@@ -61,8 +67,7 @@ class Razor
   private def answer(options = {} of Symbol => String|Int32)
     options = {
       :id => -1,
-      :class => "IN",
-      :ttl => @ttl
+      :class => "IN"
     }.merge options
     if options[:content]
       respond "DATA", options[:name], options[:class], options[:type], options[:ttl], options[:id], options[:content]
@@ -88,4 +93,4 @@ class Razor
   end
 end
 
-Razor.new(types: %w(A AAAA NS), ttl: 60, default_route: "us-east-1.route-1.000webhost.awex.io").run!
+Razor.new(types: %w(A AAAA NS), default_route: "us-east-1.route-1.000webhost.awex.io").run!
