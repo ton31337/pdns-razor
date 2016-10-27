@@ -2,10 +2,9 @@ require "redis"
 
 class Razor
 
-  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(A), banner = "Razor DNS backend", default_route = "default.route")
+  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(NS AAAA A), banner = "Razor DNS backend")
     @types = types
     @banner = banner
-    @default_route = default_route
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
   end
 
@@ -25,7 +24,7 @@ class Razor
           :name => name,
           :type => qtype,
           :ttl => ttl,
-          :content => "#{name}. hostmaster.#{name}. 2015123006 600 600 604800 600"
+          :content => getSOA(name)
         }
         answer options
       when "ANY"
@@ -46,7 +45,11 @@ class Razor
   end
 
   private def getTTL(name)
-    @redis.hmget(name, "TTL").first || @redis.hmget(@default_route, "TTL").first || 60
+    @redis.hmget(name, "TTL").first || 60
+  end
+
+  private def getSOA(name)
+    @redis.hmget(name, "SOA").first
   end
 
   private def getDataRedis(qtype, name)
@@ -56,11 +59,9 @@ class Razor
 
     case qtype
     when "NS"
-      ns = @redis.smembers("#{name}:#{qtype}")
-      ns = @redis.smembers("#{@default_route}:#{qtype}") if ns.empty?
-      ns
+      @redis.smembers("#{name}:#{qtype}")
     else
-      [@redis.srandmember("#{name}:#{qtype}") || @redis.srandmember("#{@default_route}:#{qtype}")]
+      [@redis.srandmember("#{name}:#{qtype}")]
     end
   end
 
@@ -93,4 +94,4 @@ class Razor
   end
 end
 
-Razor.new(types: %w(A AAAA NS), default_route: "us-east-1.route-1.000webhost.awex.io").run!
+Razor.new.run!
