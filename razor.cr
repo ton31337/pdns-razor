@@ -94,4 +94,4 @@ class Razor
   end
 end
 
-Razor.new.run!
+Razor.new(unixsocket: "/var/run/redis/6379/redis.sock").run!
