@@ -1,11 +1,15 @@
 require "redis"
+require "logger"
 
 class Razor
 
-  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(NS AAAA A), banner = "Razor DNS backend")
+  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(NS AAAA A), banner = "Razor DNS backend", debug = false)
     @types = types
     @banner = banner
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
+    @debug = debug
+    @log = Logger.new(STDERR)
+    @log.level = Logger::INFO
   end
 
   def run!
@@ -71,6 +75,7 @@ class Razor
       :class => "IN"
     }.merge options
     if options[:content]
+      @log.info("DATA #{options[:name]} #{options[:type]} #{options[:ttl]} #{options[:content]}") if @debug
       respond "DATA", options[:name], options[:class], options[:type], options[:ttl], options[:id], options[:content]
     end
   end
@@ -94,4 +99,4 @@ class Razor
   end
 end
 
-Razor.new(unixsocket: "/var/run/redis/6379/redis.sock").run!
+Razor.new(unixsocket: "/var/run/redis/6379/redis.sock", debug: true).run!
