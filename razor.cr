@@ -75,13 +75,13 @@ class Razor
       :class => "IN"
     }.merge options
     if options[:content]
-      @log.info("DATA #{options[:name]} #{options[:type]} #{options[:ttl]} #{options[:content]}") if @debug
       respond "DATA", options[:name], options[:class], options[:type], options[:ttl], options[:id], options[:content]
     end
   end
 
   private def respond(*args)
     STDOUT.print(args.join("\t") + "\n")
+    @log.info(args.join("\t") + "\n") if @debug
   end
 
   private def finish
