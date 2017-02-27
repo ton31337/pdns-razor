@@ -3,7 +3,7 @@ require "logger"
 
 class Razor
 
-  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(NS AAAA A), banner = "Razor DNS backend", debug = false)
+  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(SOA NS AAAA A), banner = "Razor DNS backend", debug = false)
     @types = types
     @banner = banner
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
@@ -62,6 +62,8 @@ class Razor
     end
 
     case qtype
+    when "SOA"
+      [getSOA(name)]
     when "NS"
       @redis.smembers("#{name}:#{qtype}")
     else
