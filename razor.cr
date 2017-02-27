@@ -97,6 +97,7 @@ class Razor
 
   private def parseQuery(input)
     _, name, _, qtype, _, _ = input.chomp.split("\t")
+    @log.info(input.chomp) if @debug
     return name, qtype
   end
 end
