@@ -19,7 +19,8 @@ class Razor
 
   def mainLoop
     loop do
-      name, qtype = parseQuery STDIN.read_line
+      qname, qtype = parseQuery STDIN.read_line
+      name = qname.downcase
       ttl = getTTL(name)
 
       case qtype
