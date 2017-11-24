@@ -1,9 +1,9 @@
 name: pdns_razor
-version: 0.1.8
+version: 0.1.9
 
 dependencies:
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
-    version: ~> 1.6.2
+    version: ~> 1.9.0
 
 license: BSD

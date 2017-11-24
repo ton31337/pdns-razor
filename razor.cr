@@ -58,10 +58,6 @@ class Razor
   end
 
   private def getDataRedis(qtype, name)
-    ifdef cname
-      name = @redis.get(name)
-    end
-
     case qtype
     when "SOA"
       [getSOA(name)]
