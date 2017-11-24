@@ -70,12 +70,20 @@ class Razor
 
   private def answer(options = {} of Symbol => String|Int32)
     options = {
+      :scopebits => 24,
+      :auth => 1,
       :id => -1,
       :class => "IN"
     }.merge options
-    if options[:content]
-      respond "DATA", options[:name], options[:class], options[:type], options[:ttl], options[:id], options[:content]
-    end
+    respond "DATA",
+            options[:scopebits],
+            options[:auth],
+            options[:name],
+            options[:class],
+            options[:type],
+            options[:ttl],
+            options[:id],
+            options[:content] if options[:content]
   end
 
   private def respond(*args)
