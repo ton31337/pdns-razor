@@ -1,8 +1,7 @@
 # Install
 ```
 $ shards install or crystal deps
-$ crystal build razor.cr --release (without CNAME support | A --> random IP)
-$ crystal build razor.cr --release -Dcname (with CNAME support | CNAME --> A --> random IP)
+$ crystal build razor.cr --release --no-debug
 ```
 
 # Redis
