@@ -1,14 +1,30 @@
 # Install
 ```
-$ shards install or crystal deps
+$ shards install
+$ shards update
 $ crystal build razor.cr --release --no-debug
 ```
 
-# Redis
+# Redis records
+## Random
 ```
-set example.com node1.route.example.app.io
-sadd node1.route.example.app.io:A 1.1.1.1 2.2.2.2 3.3.3.3
-sadd node1.route.example.app.io:AAAA 2001::1 2001::2 2001::3
+SADD node1.route.example.app.io:A 1.1.1.1 2.2.2.2 3.3.3.3
+SADD node1.route.example.app.io:AAAA 2001::1 2001::2 2001::3
+```
+## Consistent Hashing
+```
+HMSET node1.route.example.app.io ANSWER consistent_hash
+SADD node1.route.example.app.io:A 1.1.1.1 2.2.2.2 3.3.3.3
+SADD node1.route.example.app.io:AAAA 2001::1 2001::2 2001::3
+```
+## Group Consistent hashing
+```
+HMSET node1.route.example.app.io ANSWER group_consistent_hash
+SADD node1.route.example.app.io:GROUPS GROUP1 GROUP2
+SADD GROUP1:A 192.168.1.1 192.168.1.2
+SADD GROUP2:A 192.168.2.1 192.168.2.2
+SADD GROUP1:AAAA 2001::1 2001::2
+SADD GROUP2:AAAA 2002::1 2002::2
 ```
 
 # Tests
