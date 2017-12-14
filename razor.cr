@@ -115,7 +115,9 @@ class Razor
   end
 
   private def ch_content(name, edns)
-    hash = ip_hashed(edns_ip(edns), servers_count(name))
+    count = servers_count(name)
+    return if count == 0
+    hash = ip_hashed(edns_ip(edns), count)
     @redis.smembers(name)[hash]
   end
 
