@@ -20,7 +20,7 @@ class Razor
 
   def mainLoop
     loop do
-      qname, qtype, edns = parse_query STDIN.read_line
+      qname, qtype, srcip = parse_query STDIN.read_line
       name = qname.downcase
       ttl = ttl(name)
 
@@ -35,7 +35,7 @@ class Razor
         answer options
       when "ANY"
         @types.each do |type|
-          data_from_redis(type, name, edns).each do |response|
+          data_from_redis(type, name, srcip).each do |response|
             options = {
               :name => name,
               :type => type,
@@ -110,23 +110,19 @@ class Razor
     @redis.smembers("#{name}:GROUPS") || [] of String
   end
 
-  private def edns_ip(edns)
-    edns.split("/")[0]
-  end
-
-  private def ch_content(name, edns)
+  private def ch_content(name, srcip)
     count = servers_count(name)
     return if count == 0
-    hash = ip_hashed(edns_ip(edns), count)
+    hash = ip_hashed(srcip, count)
     @redis.smembers(name)[hash]
   end
 
-  private def gch_content(qtype, groups, edns)
-    hash = ip_hashed(edns_ip(edns), groups.size)
+  private def gch_content(qtype, groups, srcip)
+    hash = ip_hashed(srcip, groups.size)
     @redis.srandmember("#{groups[hash]}:#{qtype}")
   end
 
-  private def data_from_redis(qtype, name, edns)
+  private def data_from_redis(qtype, name, srcip)
     case qtype
     when "SOA"
       [soa(name)]
@@ -137,9 +133,9 @@ class Razor
       when "random"
         [@redis.srandmember("#{name}:#{qtype}")]
       when "consistent_hash"
-        [ch_content("#{name}:#{qtype}", edns)]
+        [ch_content("#{name}:#{qtype}", srcip)]
       when "group_consistent_hash"
-        [gch_content(qtype, dns_groups(name), edns)]
+        [gch_content(qtype, dns_groups(name), srcip)]
       else
         [] of String
       end
@@ -179,9 +175,9 @@ class Razor
   end
 
   private def parse_query(input)
-    _, name, _, qtype, _, _, _, edns = input.chomp.split("\t")
+    _, name, _, qtype, _, srcip, _, _ = input.chomp.split("\t")
     @log.info(input.chomp) if @debug
-    return name, qtype, edns
+    return name, qtype, srcip
   end
 end
 
