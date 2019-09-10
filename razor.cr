@@ -50,6 +50,12 @@ class Razor
     end
   end
 
+  private def to_sorted_array_of_string(array)
+    array.map do |item|
+      item.to_s
+    end.sort
+  end
+
   private def ipv4_int(ip)
     ip_int = 0.to_big_i
     ip.split(".").each_with_index do |oct, i|
@@ -114,7 +120,7 @@ class Razor
     count = servers_count(name)
     return if count == 0
     hash = ip_hashed(srcip, count)
-    @redis.smembers(name)[hash]
+    to_sorted_array_of_string(@redis.smembers(name))[hash]
   end
 
   private def gch_content(qtype, groups, srcip)
@@ -135,7 +141,7 @@ class Razor
       when "consistent_hash"
         [ch_content("#{name}:#{qtype}", srcip)]
       when "group_consistent_hash"
-        [gch_content(qtype, dns_groups(name), srcip)]
+        [gch_content(qtype, to_sorted_array_of_string(dns_groups(name)), srcip)]
       else
         [] of String
       end
