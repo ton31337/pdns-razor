@@ -32,7 +32,7 @@ class Razor
           :ttl => ttl,
           :content => soa(name)
         }
-        answer options
+        answer(srcip, options)
       when "ANY"
         @types.each do |type|
           data_from_redis(type, name, srcip).each do |response|
@@ -42,7 +42,7 @@ class Razor
               :ttl => ttl,
               :content => response
             }
-            answer options
+            answer(srcip, options)
           end
         end
       end
@@ -142,9 +142,9 @@ class Razor
     end
   end
 
-  private def answer(options = {} of Symbol => String|Int32)
+  private def answer(srcip, options = {} of Symbol => String|Int32)
     options = {
-      :scopebits => 24,
+      :scopebits => srcip.includes?(":") ? 128 : 32,
       :auth => 1,
       :id => -1,
       :class => "IN"
