@@ -4,13 +4,18 @@ require "big"
 
 class Razor
 
-  def initialize(unixsocket = nil, host = "127.0.0.1", port = 6379, types = %w(SOA NS AAAA A), banner = "Razor DNS backend", debug = false)
+  def initialize(unixsocket = nil,
+                 host = "127.0.0.1",
+                 port = 6379,
+                 types = %w(SOA NS AAAA A),
+                 banner = "Razor DNS backend", hash_src = "edns", debug = false)
     @types = types
     @banner = banner
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
     @debug = debug
     @log = Logger.new(STDERR)
     @log.level = Logger::INFO
+    @hash_src = hash_src
   end
 
   def run!
@@ -20,9 +25,10 @@ class Razor
 
   def mainLoop
     loop do
-      qname, qtype, srcip = parse_query STDIN.read_line
+      qname, qtype, src, edns = parse_query STDIN.read_line
       name = qname.downcase
       ttl = ttl(name)
+      edns = edns.split("/")[0]
 
       case qtype
       when "SOA"
@@ -32,17 +38,19 @@ class Razor
           :ttl => ttl,
           :content => soa(name)
         }
-        answer(srcip, options)
+        answer(edns, options) if @hash_src == "edns"
+        answer(src, options) if @hash_src == "src"
       when "ANY"
         @types.each do |type|
-          data_from_redis(type, name, srcip).each do |response|
+          data_from_redis(type, name, src).each do |response|
             options = {
               :name => name,
               :type => type,
               :ttl => ttl,
               :content => response
             }
-            answer(srcip, options)
+            answer(edns, options) if @hash_src == "edns"
+            answer(src, options) if @hash_src == "src"
           end
         end
       end
@@ -116,19 +124,19 @@ class Razor
     @redis.smembers("#{name}:GROUPS") || [] of String
   end
 
-  private def ch_content(name, srcip)
+  private def ch_content(name, src)
     count = servers_count(name)
     return if count == 0
-    hash = ip_hashed(srcip, count)
+    hash = ip_hashed(src, count)
     to_sorted_array_of_string(@redis.smembers(name))[hash]
   end
 
-  private def gch_content(qtype, groups, srcip)
-    hash = ip_hashed(srcip, groups.size)
+  private def gch_content(qtype, groups, src)
+    hash = ip_hashed(src, groups.size)
     @redis.srandmember("#{groups[hash]}:#{qtype}")
   end
 
-  private def data_from_redis(qtype, name, srcip)
+  private def data_from_redis(qtype, name, src)
     case qtype
     when "SOA"
       [soa(name)]
@@ -139,18 +147,18 @@ class Razor
       when "random"
         [@redis.srandmember("#{name}:#{qtype}")]
       when "consistent_hash"
-        [ch_content("#{name}:#{qtype}", srcip)]
+        [ch_content("#{name}:#{qtype}", src)]
       when "group_consistent_hash"
-        [gch_content(qtype, to_sorted_array_of_string(dns_groups(name)), srcip)]
+        [gch_content(qtype, to_sorted_array_of_string(dns_groups(name)), src)]
       else
         [] of String
       end
     end
   end
 
-  private def answer(srcip, options = {} of Symbol => String|Int32)
+  private def answer(src, options = {} of Symbol => String|Int32)
     options = {
-      :scopebits => srcip.includes?(":") ? 128 : 32,
+      :scopebits => src.includes?(":") ? 128 : 32,
       :auth => 1,
       :id => -1,
       :class => "IN"
@@ -181,9 +189,9 @@ class Razor
   end
 
   private def parse_query(input)
-    _, name, _, qtype, _, srcip, _, _ = input.chomp.split("\t")
+    _, name, _, qtype, _, src, _, edns = input.chomp.split("\t")
     @log.info(input.chomp) if @debug
-    return name, qtype, srcip
+    return name, qtype, src, edns
   end
 end
 
