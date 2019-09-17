@@ -158,7 +158,7 @@ class Razor
 
   private def answer(src, options = {} of Symbol => String|Int32)
     options = {
-      :scopebits => src.includes?(":") ? 128 : 32,
+      :scopebits => src.includes?(":") ? 48 : 24,
       :auth => 1,
       :id => -1,
       :class => "IN"
