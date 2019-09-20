@@ -8,14 +8,14 @@ class Razor
                  host = "127.0.0.1",
                  port = 6379,
                  types = %w(SOA NS AAAA A),
-                 banner = "Razor DNS backend", hash_src = "edns", debug = false)
+                 banner = "Razor DNS backend", hash_method = "edns", debug = false)
     @types = types
     @banner = banner
     @redis = Redis.new(host: host, port: port, unixsocket: unixsocket)
     @debug = debug
     @log = Logger.new(STDERR)
     @log.level = Logger::INFO
-    @hash_src = hash_src
+    @hash_method = hash_method
   end
 
   def run!
@@ -29,6 +29,7 @@ class Razor
       name = qname.downcase
       ttl = ttl(name)
       edns = edns.split("/")[0]
+      hash_source = @hash_method == "edns" ? edns : src
 
       case qtype
       when "SOA"
@@ -38,19 +39,17 @@ class Razor
           :ttl => ttl,
           :content => soa(name)
         }
-        answer(edns, options) if @hash_src == "edns"
-        answer(src, options) if @hash_src == "src"
+        answer(hash_source, options)
       when "ANY"
         @types.each do |type|
-          data_from_redis(type, name, src).each do |response|
+          data_from_redis(type, name, hash_source).each do |response|
             options = {
               :name => name,
               :type => type,
               :ttl => ttl,
               :content => response
             }
-            answer(edns, options) if @hash_src == "edns"
-            answer(src, options) if @hash_src == "src"
+            answer(hash_source, options)
           end
         end
       end
