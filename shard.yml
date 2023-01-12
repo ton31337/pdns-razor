@@ -1,11 +1,13 @@
 name: pdns_razor
-version: 0.1.17
+version: 0.1.18
 
 dependencies:
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
     version: ~> 1.9.0
-#  logger:
-#    github: 84codes/logger.cr
+  logger:
+    github: 84codes/logger.cr
+  geoip2:
+    github: delef/geoip2.cr
 
 license: BSD

@@ -6,6 +6,12 @@ $ crystal build razor.cr --release --no-debug
 ```
 
 # Redis records
+
+## Zone setup
+```
+HMSET node1.route.example.app.io SOA "..."
+HMSET node1.route.example.app.io TTL 3600
+```
 ## Random
 ```
 SADD node1.route.example.app.io:A 1.1.1.1 2.2.2.2 3.3.3.3
