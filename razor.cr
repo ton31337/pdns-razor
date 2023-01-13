@@ -122,7 +122,9 @@ class Razor
 
   private def geoip_data(ip)
     rec = @geoip.country(ip)
-    return rec.continent.code.downcase, rec.country.iso_code.downcase
+    continent = rec.continent.code
+    country = rec.country.iso_code
+    return continent, country
   end
 
   private def to_sorted_array_of_string(array)
@@ -205,13 +207,44 @@ class Razor
     @redis.srandmember("#{groups[hash]}:#{qtype}")
   end
 
-  private def geoip_content(name, src)
-    # Proess GeoIP here, and return the pool by the
+  private def geoip_content(name, qtype, src)
+    # Process GeoIP here, and return the pool by the
     # country/continent.
-    count = servers_count(name)
-    return if count == 0
-    hash = ip_hashed(src, count)
-    to_sorted_array_of_string(@redis.smembers(name))[hash]
+    # In Redis, the keys MUST keep the following encoding:
+    #   geoip:eu
+    #   geoip:eu:lt
+    #   geoip:eu:uk
+    #   geoip:na
+    #   geoip:na:us
+    #   ...
+    #
+    # Redis KEY returns the VALUE of something like:
+    #   GET geoip:eu:lt
+    #   uk1.routes.example.net
+    # Subsequent requests will use the scheme as below:
+    #   SRANDMEMBER uk1.routes.example.net:A
+    #   SRANDMEMBER uk1.routes.example.net:AAAA
+    #
+    # The first request checks if we can return A/AAAA from
+    # the pool which is under the country. If not found, then
+    # check by continent.
+    # Moreover, even if the continent does not exist, then
+    # return random IP from the default zone:A, zone:AAAA.
+    route : (String | Nil) = nil
+    continent, country = geoip_data(src)
+
+    if continent && country
+      route = @redis.get("geoip:#{continent.downcase}:#{country.downcase}")
+      unless route
+        route = @redis.get("geoip:#{continent.downcase}")
+      end
+    end
+
+    if route
+      return @redis.srandmember("#{route}:#{qtype}")
+    end
+
+    return @redis.srandmember("#{name}:#{qtype}")
   end
 
   private def data_from_redis(qtype, name, src)
@@ -229,7 +262,7 @@ class Razor
       when "group_consistent_hash"
         [gch_content(qtype, to_sorted_array_of_string(dns_groups(name)), src)]
       when "geoip"
-        [geoip_content("#{name}:#{qtype}", src)]
+        [geoip_content(name, qtype, src)]
       else
         [] of String
       end
