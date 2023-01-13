@@ -9,7 +9,7 @@ $ crystal build razor.cr --release --no-debug
 
 ## Zone setup
 ```
-HMSET node1.route.example.app.io SOA "..."
+HMSET node1.route.example.app.io SOA ...
 HMSET node1.route.example.app.io TTL 3600
 ```
 ## Random
@@ -31,6 +31,22 @@ SADD GROUP1:A 192.168.1.1 192.168.1.2
 SADD GROUP2:A 192.168.2.1 192.168.2.2
 SADD GROUP1:AAAA 2001::1 2001::2
 SADD GROUP2:AAAA 2002::1 2002::2
+```
+## GeoIP
+
+This setup requires setting `zone` in `razor.json` to be like in this `routes.example.org`:
+```
+HMSET routes.example.org ANSWER geoip
+HMSET routes.example.org SOA ...
+HMSET routes.example.org TTL 3600
+SADD routes.example.org:A 10.0.0.1 10.0.0.2
+SADD routes.example.org:AAAA 2a02::1 2a02::2
+SADD node1.route.example.app.io:A 1.1.1.1 2.2.2.2
+SADD node1.route.example.app.io:AAAA 2001::1 2001::2
+SADD node2.route.example.app.io:A 192.168.0.1 192.168.0.2
+SADD node2.route.example.app.io:AAAA 2a02:4780::1 2a02:4780::2
+SET geoip:eu:lt node1.route.example.app.io
+SET geoip:eu node2.route.example.app.io
 ```
 
 # Tests
