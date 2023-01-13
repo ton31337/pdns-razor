@@ -120,14 +120,9 @@ class Razor
     end
   end
 
-  private def ip_country(ip)
+  private def geoip_data(ip)
     rec = @geoip.country(ip)
-    rec.country.iso_code.downcase
-  end
-
-  private def ip_continent(ip)
-    rec = @geoip.country(ip)
-    rec.continent.code.downcase
+    return rec.continent.code.downcase, rec.country.iso_code.downcase
   end
 
   private def to_sorted_array_of_string(array)
