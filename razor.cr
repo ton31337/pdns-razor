@@ -90,26 +90,27 @@ class Razor
     loop do
       qname, qtype, src, edns = parse_query STDIN.read_line
       name = @zone || qname.downcase
-      ttl = ttl(name)
       edns = edns.split("/")[0]
       hash_source = @hash_method == "edns" ? edns : src
+
+      mandatory_options = mandatory_dns_options(name)
 
       case qtype
       when "SOA"
         options = {
           :name    => name,
           :type    => qtype,
-          :ttl     => ttl,
-          :content => soa(name),
+          :ttl     => mandatory_options[:ttl],
+          :content => mandatory_options[:soa],
         }
         answer(hash_source, options)
       when "ANY"
         @types.each do |type|
-          data_from_redis(type, name, hash_source).each do |response|
+          data_from_redis(type, name, hash_source, mandatory_options).each do |response|
             options = {
               :name    => name,
               :type    => type,
-              :ttl     => ttl,
+              :ttl     => mandatory_options[:ttl],
               :content => response,
             }
             answer(hash_source, options)
@@ -118,6 +119,18 @@ class Razor
       end
       finish
     end
+  end
+
+  private def mandatory_dns_options(name)
+    # SOA record MUST be created, otherwise no other
+    # content will be returned at all.
+    soa, ns, ttl, answer_type = @redis.hmget(name, "SOA", "NS", "TTL", "ANSWER")
+    {
+      soa:         soa,
+      ns:          ns,
+      ttl:         ttl || 60,
+      answer_type: answer_type || "random",
+    }
   end
 
   private def geoip_data(ip)
@@ -171,20 +184,6 @@ class Razor
     else
       (ipv4_int(ip) & 0xffffff00) % count
     end
-  end
-
-  private def ttl(name)
-    @redis.hmget(name, "TTL").first || 60
-  end
-
-  private def soa(name)
-    # SOA record MUST be created, otherwise no other
-    # content will be returned at all.
-    @redis.hmget(name, "SOA").first
-  end
-
-  private def answer_type(name)
-    @redis.hmget(name, "ANSWER").first || "random"
   end
 
   private def servers_count(name)
@@ -247,14 +246,14 @@ class Razor
     return @redis.srandmember("#{name}:#{qtype}")
   end
 
-  private def data_from_redis(qtype, name, src)
+  private def data_from_redis(qtype, name, src, options)
     case qtype
     when "SOA"
-      [soa(name)]
+      [options[:soa]]
     when "NS"
       @redis.smembers("#{name}:#{qtype}")
     else
-      case answer_type(name)
+      case options[:answer_type]
       when "random"
         [@redis.srandmember("#{name}:#{qtype}")]
       when "consistent_hash"

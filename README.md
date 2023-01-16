@@ -11,6 +11,7 @@ $ crystal build razor.cr --release --no-debug
 ```
 HMSET node1.route.example.app.io SOA ...
 HMSET node1.route.example.app.io TTL 3600
+SADD node1.route.example.app.io:NS 1.1.1.1 2.2.2.2
 ```
 ## Random
 ```
