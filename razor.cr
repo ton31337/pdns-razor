@@ -89,7 +89,8 @@ class Razor
   def mainLoop
     loop do
       qname, qtype, src, edns = parse_query STDIN.read_line
-      name = @zone || qname.downcase
+      qname = qname.downcase
+      name = @zone || qname
       edns = edns.split("/")[0]
       hash_source = @hash_method == "edns" ? edns : src
 
@@ -98,7 +99,7 @@ class Razor
       case qtype
       when "SOA"
         options = {
-          :name    => name,
+          :name    => qname,
           :type    => qtype,
           :ttl     => mandatory_options[:ttl],
           :content => mandatory_options[:soa],
@@ -108,7 +109,7 @@ class Razor
         @types.each do |type|
           data_from_redis(type, name, hash_source, mandatory_options).each do |response|
             options = {
-              :name    => name,
+              :name    => qname,
               :type    => type,
               :ttl     => mandatory_options[:ttl],
               :content => response,
