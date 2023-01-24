@@ -90,11 +90,10 @@ class Razor
     loop do
       qname, qtype, src, edns = parse_query STDIN.read_line
       qname = qname.downcase
-      name = @zone || qname
       edns = edns.split("/")[0]
       hash_source = @hash_method == "edns" ? edns : src
 
-      mandatory_options = mandatory_dns_options(name)
+      mandatory_options = mandatory_dns_options(qname)
 
       case qtype
       when "SOA"
@@ -107,7 +106,7 @@ class Razor
         answer(hash_source, options)
       when "ANY"
         @types.each do |type|
-          data_from_redis(type, name, hash_source, mandatory_options).each do |response|
+          data_from_redis(type, qname, hash_source, mandatory_options).each do |response|
             options = {
               :name    => qname,
               :type    => type,
@@ -123,6 +122,7 @@ class Razor
   end
 
   private def mandatory_dns_options(name)
+    name = @zone || name
     # SOA record MUST be created, otherwise no other
     # content will be returned at all.
     soa, ns, ttl, answer_type = @redis.hmget(name, "SOA", "NS", "TTL", "ANSWER")
@@ -135,6 +135,8 @@ class Razor
   end
 
   private def geoip_data(ip)
+    return nil, nil unless ip
+
     rec = @geoip.country(ip)
     continent = rec.continent.code
     country = rec.country.iso_code
@@ -207,7 +209,7 @@ class Razor
     @redis.srandmember("#{groups[hash]}:#{qtype}")
   end
 
-  private def geoip_content(name, qtype, src)
+  private def geoip_content(qname, qtype, src)
     # Process GeoIP here, and return the pool by the
     # country/continent.
     # In Redis, the keys MUST keep the following encoding:
@@ -231,7 +233,19 @@ class Razor
     # Moreover, even if the continent does not exist, then
     # return random IP from the default zone:A, zone:AAAA.
     route : (String | Nil) = nil
-    continent, country = geoip_data(src)
+    continent : (String | Nil) = nil
+    country : (String | Nil) = nil
+
+    # If we want to stick specific qname to an arbitrary PoP
+    # instead of relying on GeoIP data, just create a key in Redis
+    # like:
+    #   SET donatas.net.<default_zone> uk1.routes.example.net
+    r_name = @redis.get(qname)
+    if r_name
+      name = r_name
+    else
+      continent, country = geoip_data(src)
+    end
 
     if continent && country
       route = @redis.get("geoip:#{continent.downcase}:#{country.downcase}")
@@ -244,6 +258,7 @@ class Razor
       return @redis.srandmember("#{route}:#{qtype}")
     end
 
+    # If GeoIP is skipped, return more specific PoP
     return @redis.srandmember("#{name}:#{qtype}")
   end
 
@@ -252,6 +267,7 @@ class Razor
     when "SOA"
       [options[:soa]]
     when "NS"
+      name = @zone || name
       @redis.smembers("#{name}:#{qtype}")
     else
       case options[:answer_type]
