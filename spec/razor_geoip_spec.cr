@@ -1,6 +1,6 @@
 require "./helper"
 
-describe "RazorTest" do
+describe "GeoIP" do
   it "Initialize Razor" do
     RazorTest.new.razor
   end
