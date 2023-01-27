@@ -105,6 +105,7 @@ class Razor
         }
         answer(hash_source, options)
       when "ANY"
+        @types = %w(SOA NS AAAA A TXT) if @debug
         @types.each do |type|
           data_from_redis(type, qname, hash_source, mandatory_options).each do |response|
             options = {
@@ -263,11 +264,11 @@ class Razor
     end
 
     if route
-      return @redis.srandmember("#{route}:#{qtype}")
+      return @redis.srandmember("#{route}:#{qtype}"), continent, country
     end
 
     # If GeoIP is skipped, return more specific PoP or the default @zone
-    return @redis.srandmember("#{name}:#{qtype}")
+    return @redis.srandmember("#{name}:#{qtype}"), nil, nil
   end
 
   def data_from_redis(qtype, name, src, options)
@@ -277,6 +278,13 @@ class Razor
     when "NS"
       name = @zone || name
       @redis.smembers("#{name}:#{qtype}")
+    when "TXT"
+      ip, continent, country = geoip_content(name, src.includes?(":") ? "AAAA" : "A", src)
+      if continent && country
+        ["Razor/#{src} (#{continent}:#{country})/#{ip}"]
+      else
+        ["Razor/#{src}/#{ip}"]
+      end
     else
       case options[:answer_type]
       when "random"
@@ -286,7 +294,8 @@ class Razor
       when "group_consistent_hash"
         [gch_content(qtype, to_sorted_array_of_string(dns_groups(name)), src)]
       when "geoip"
-        [geoip_content(name, qtype, src)]
+        ip, _, _ = geoip_content(name, qtype, src)
+        [ip]
       else
         [] of String
       end
