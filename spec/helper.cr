@@ -18,7 +18,7 @@ class RazorTest
   @redis_unixsocket : (JSON::Any | Nil)
   @razor_zone : (JSON::Any | Nil)
 
-  def initialize(file = "./misc/razor.json")
+  def initialize(file = "./test/razor.json")
     @config = file
     @context = "test"
     File.open(file) do |f|
