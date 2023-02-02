@@ -18,7 +18,6 @@ class Razor
     @redis_unixsocket = "/tmp/redis.sock"
     @debug = false
     @log = Logger.new(STDERR)
-    @log.level = Logger::INFO
     @hash_method = "edns"
     @zone = nil
     @geoip_db_path = "/usr/share/GeoIP/GeoIP2-Country.mmdb"
@@ -45,8 +44,8 @@ class Razor
         exit
       end
       parser.invalid_option do |flag|
-        STDERR.puts "ERROR: #{flag} is not a valid option."
-        STDERR.puts parser
+        @log.error("#{flag} is not a valid option")
+        @log.error(parser)
         exit(1)
       end
     end
@@ -55,7 +54,7 @@ class Razor
       config = JSON.parse(file)
 
       unless config["contexts"]
-        STDERR.puts "ERROR: Can't parse JSON #{@config} configuration file."
+        @log.error("can't parse JSON #{@config} configuration file")
         exit(1)
       end
 
@@ -73,11 +72,11 @@ class Razor
           @geoip_db_path = context["geoip_db_path"].as_s
         end
       rescue
-        STDERR.puts "ERROR: No such context found #{@context} or missing configuration in JSON."
+        @log.error("no such context found #{@context} or missing configuration in JSON")
         exit(1)
       end
 
-      @log.info("Loading with configuration: #{context}") if @debug
+      @log.info("Loading with configuration: #{context}")
     end
   end
 
@@ -145,6 +144,7 @@ class Razor
       continent = rec.continent.code
       country = rec.country.iso_code
     rescue
+      @log.warn("GeoIP information not found for #{ip}")
       return nil, nil
     end
 
@@ -322,7 +322,6 @@ class Razor
 
   private def respond(*args)
     STDOUT.print(args.join("\t") + "\n")
-    @log.info(args.join("\t") + "\n") if @debug
   end
 
   private def finish
@@ -336,7 +335,6 @@ class Razor
 
   private def parse_query(input)
     _, name, _, qtype, _, src, _, edns = input.chomp.split("\t")
-    @log.info(input.chomp) if @debug
     return name, qtype, src, edns
   end
 end
