@@ -68,6 +68,10 @@ describe "GeoIP" do
     # Others gets IPs from cdn.example.org pool
     razor.data_from_redis("A", qname, "102.164.115.0", options).should eq(["10.0.0.1"])
     razor.data_from_redis("AAAA", qname, "2a06:4b80::", options).should eq(["2a02:4780::1"])
+
+    # Others gets IPs from cdn.example.org pool, not found in GeoIP database
+    razor.data_from_redis("A", qname, "127.0.0.1", options).should eq(["10.0.0.1"])
+    razor.data_from_redis("AAAA", qname, "::1", options).should eq(["2a02:4780::1"])
   end
 
   it "Check if specific domains are sticked to an arbitrary PoP" do
