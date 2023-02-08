@@ -8,7 +8,7 @@
       "redis_host": "127.0.0.1",
       "redis_port": 6379,
       "redis_unixsocket": "/tmp/redis.sock",
-      "geoip_db_path": "./test/GeoIP2-Country.mmdb"
+      "geoip_db_path": "./tools/GeoIP2-Country.mmdb"
     }
   }
 }
