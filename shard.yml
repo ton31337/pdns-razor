@@ -9,5 +9,7 @@ dependencies:
     github: 84codes/logger.cr
   geoip2:
     github: delef/geoip2.cr
+  schedule:
+    github: hugoabonizio/schedule.cr
 
 license: BSD

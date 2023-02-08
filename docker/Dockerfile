@@ -1,5 +1,5 @@
 FROM alpine:3.17 as razor-tests
-RUN apk add crystal shards redis
+RUN apk add crystal shards redis openssl-dev
 RUN sed -i 's/^unixsocketperm \d\+/unixsocketperm 777/' /etc/redis.conf
 RUN sed -i 's/^unixsocket \/run\/redis\/redis.sock/unixsocket \/tmp\/redis.sock/' /etc/redis.conf
 RUN mkdir /app
