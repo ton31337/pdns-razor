@@ -23,5 +23,5 @@ jobs:
           file: ./docker/pkgs/razor-rockylinux8
           asset_name: razor-rockylinux8
           tag: ${{ github.ref }}
-          overwrite: false
+          overwrite: true
           body: "This is the automatic release done by Github actions with every new push to the master branch."
