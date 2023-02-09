@@ -6,6 +6,8 @@ require "option_parser"
 require "json"
 
 class Razor
+  VERSION = {{ read_file("./VERSION").chomp }}
+
   @zone : (String | Nil)
 
   def initialize(config = "/etc/pdns/razor.json", context = "production")
@@ -38,6 +40,10 @@ class Razor
       end
       parser.on("-c CONTEXT", "--context=CONTEXT", "Context to use, default: #{@context}") do |context|
         @context = context
+      end
+      parser.on("-v", "--version", "Show version") do |_|
+        puts VERSION
+        exit
       end
       parser.on("-h", "--help", "Show this help") do
         puts parser

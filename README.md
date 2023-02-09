@@ -7,8 +7,12 @@ $ crystal build razor.cr --release --no-debug
 
 # Testing with docker
 ```
-docker build -f test/Dockerfile --tag razor-tests .
-docker run -ti razor-tests
+sudo ./docker/tests.sh
+```
+
+# Building binary with docker
+```
+sudo ./docker/build.sh
 ```
 
 # Redis records

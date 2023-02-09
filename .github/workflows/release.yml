@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  compile-and-release:
+    name: Compile and release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Custom variables
+        id: vars
+        run: |
+          echo ::set-output name=version::$(cat VERSION)
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build image
+        run: ./docker/build.sh
+
+      - name: Upload Razor (RockyLinux8) to releases
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: razor-rockylinux8
+          asset_name: "razor-rockylinux8-${{ steps.vars.outputs.version }}"
+          tag: ${{ github.ref }}
+          overwrite: false
+          body: "This is the automatic release done by Github actions with every new push to the master branch."
