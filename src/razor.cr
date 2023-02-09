@@ -118,7 +118,16 @@ class Razor
         }
         answer(hash_source, options)
       when "ANY"
+        # If debug is enabled, query backend for TXT records
+        # additionally.
         @types = %w(SOA NS AAAA A TXT) if @debug
+
+        # If we query qname which is identical to the default
+        # zone, we shouldn't query for GeoIP data, otherwise
+        # we will end up in WRONGTYPE Redis error, because the
+        # default zone has HGETALL, and for more specific routes
+        # we query with GET.
+        @types = %w(SOA NS) if @zone && @zone == qname
         @types.each do |type|
           data_from_redis(type, qname, hash_source, mandatory_options).each do |response|
             options = {
@@ -279,23 +288,27 @@ class Razor
     # instead of relying on GeoIP data, just create a key in Redis
     # like:
     #   SET donatas.net.<default_zone> uk1.routes.example.net
-    r_name = @redis.get(qname)
-    if r_name
-      name = r_name
-    else
-      name = @zone || qname
-      continent, country = geoip_data(src)
-    end
-
-    if continent && country
-      route = @redis.get("geoip:#{continent.downcase}:#{country.downcase}")
-      unless route
-        route = @redis.get("geoip:#{continent.downcase}")
+    begin
+      r_name = @redis.get(qname)
+      if r_name
+        name = r_name
+      else
+        name = @zone || qname
+        continent, country = geoip_data(src)
       end
-    end
 
-    if route
-      return @redis.srandmember("#{route}:#{qtype}"), continent, country
+      if continent && country
+        route = @redis.get("geoip:#{continent.downcase}:#{country.downcase}")
+        unless route
+          route = @redis.get("geoip:#{continent.downcase}")
+        end
+      end
+
+      if route
+        return @redis.srandmember("#{route}:#{qtype}"), continent, country
+      end
+    rescue Redis::Error
+      @log.error("Something went wrong, key: '#{qname}:#{qtype}', src: #{src}")
     end
 
     # If GeoIP is skipped, return more specific PoP or the default @zone
