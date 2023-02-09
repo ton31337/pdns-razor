@@ -4,11 +4,14 @@ require "big"
 require "geoip2"
 require "option_parser"
 require "json"
+require "digest/md5"
+require "schedule"
 
 class Razor
   VERSION = {{ read_file("./VERSION").chomp }}
 
   @zone : (String | Nil)
+  @geoip_db_checksum : (String | Nil)
 
   def initialize(config = "/etc/pdns/razor.json", context = "production")
     @config = config
@@ -27,6 +30,7 @@ class Razor
     parse_arguments
 
     @geoip = GeoIP2.open(@geoip_db_path)
+    @geoip_db_checksum = geoip_db_checksum
     @redis = Redis.new(host: @redis_host,
       port: @redis_port,
       unixsocket: @redis_unixsocket)
@@ -92,6 +96,10 @@ class Razor
   end
 
   def mainLoop
+    Schedule.every(5.seconds) do
+      geoip_db_check
+    end
+
     loop do
       qname, qtype, src, edns = parse_query STDIN.read_line
       qname = qname.downcase
@@ -124,6 +132,23 @@ class Razor
         end
       end
       finish
+    end
+  end
+
+  private def geoip_db_checksum
+    digest = Digest::MD5.digest do |ctx|
+      ctx.update File.read(@geoip_db_path)
+    end
+    digest.to_slice.hexstring
+  end
+
+  private def geoip_db_check
+    # If the checksum changed of the .mmdb file, close, and
+    # reopen to handle this internally, without PowerDNS restart.
+    new_geoip_db_checksum = geoip_db_checksum
+    if @geoip_db_checksum != new_geoip_db_checksum
+      @geoip = GeoIP2.open(@geoip_db_path)
+      @geoip_db_checksum = new_geoip_db_checksum
     end
   end
 
