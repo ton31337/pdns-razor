@@ -85,4 +85,14 @@ describe "GeoIP" do
     razor.data_from_redis("A", qname, "32.47.115.0", options).should eq(["10.0.1.2"])
     razor.data_from_redis("AAAA", qname, "2a06:4b80::", options).should eq(["2a02:478:1::2"])
   end
+
+  it "Check if we don't crash if quering a default zone" do
+    qname = "example.org"
+    razor_test = RazorTest.new
+    redis_unixsocket = razor_test.redis_unixsocket
+    redis = Redis.new(unixsocket: redis_unixsocket)
+    razor = RazorTest.new.razor
+    options = razor.mandatory_dns_options(qname)
+    razor.data_from_redis("A", qname, "32.47.115.0", options).should eq([nil])
+  end
 end
