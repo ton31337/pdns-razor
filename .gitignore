@@ -2,4 +2,4 @@ shard.lock
 lib/
 .shards/
 razor
-docker/pkgs/*
+docker/pkgs/razor-*
