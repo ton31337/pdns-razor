@@ -121,13 +121,6 @@ class Razor
         # If debug is enabled, query backend for TXT records
         # additionally.
         @types = %w(SOA NS AAAA A TXT) if @debug
-
-        # If we query qname which is identical to the default
-        # zone, we shouldn't query for GeoIP data, otherwise
-        # we will end up in WRONGTYPE Redis error, because the
-        # default zone has HGETALL, and for more specific routes
-        # we query with GET.
-        @types = %w(SOA NS) if @zone && @zone == qname
         @types.each do |type|
           data_from_redis(type, qname, hash_source, mandatory_options).each do |response|
             options = {
@@ -165,7 +158,7 @@ class Razor
     name = @zone || name
     # SOA record MUST be created, otherwise no other
     # content will be returned at all.
-    soa, ns, ttl, answer_type = @redis.hmget(name, "SOA", "NS", "TTL", "ANSWER")
+    soa, ns, ttl, answer_type = @redis.hmget("#{name}:CONFIG", "SOA", "NS", "TTL", "ANSWER")
     {
       soa:         soa,
       ns:          ns,

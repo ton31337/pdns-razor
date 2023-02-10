@@ -19,8 +19,8 @@ sudo ./docker/build.sh
 
 ## Zone setup
 ```
-HMSET node1.route.example.app.io SOA ...
-HMSET node1.route.example.app.io TTL 3600
+HMSET node1.route.example.app.io:CONFIG SOA ...
+HMSET node1.route.example.app.io:CONFIG TTL 3600
 SADD node1.route.example.app.io:NS 1.1.1.1 2.2.2.2
 ```
 ## Random
@@ -30,13 +30,13 @@ SADD node1.route.example.app.io:AAAA 2001::1 2001::2 2001::3
 ```
 ## Consistent Hashing
 ```
-HMSET node1.route.example.app.io ANSWER consistent_hash
+HMSET node1.route.example.app.io:CONFIG ANSWER consistent_hash
 SADD node1.route.example.app.io:A 1.1.1.1 2.2.2.2 3.3.3.3
 SADD node1.route.example.app.io:AAAA 2001::1 2001::2 2001::3
 ```
 ## Group Consistent hashing
 ```
-HMSET node1.route.example.app.io ANSWER group_consistent_hash
+HMSET node1.route.example.app.io:CONFIG ANSWER group_consistent_hash
 SADD node1.route.example.app.io:GROUPS GROUP1 GROUP2
 SADD GROUP1:A 192.168.1.1 192.168.1.2
 SADD GROUP2:A 192.168.2.1 192.168.2.2
@@ -47,9 +47,9 @@ SADD GROUP2:AAAA 2002::1 2002::2
 
 This setup requires setting `zone` in `razor.json` to be like in this `routes.example.org`:
 ```
-HMSET routes.example.org ANSWER geoip
-HMSET routes.example.org SOA ...
-HMSET routes.example.org TTL 3600
+HMSET routes.example.org:CONFIG ANSWER geoip
+HMSET routes.example.org:CONFIG SOA ...
+HMSET routes.example.org:CONFIG TTL 3600
 SADD routes.example.org:A 10.0.0.1 10.0.0.2
 SADD routes.example.org:AAAA 2a02::1 2a02::2
 SADD node1.route.example.app.io:A 1.1.1.1 2.2.2.2
