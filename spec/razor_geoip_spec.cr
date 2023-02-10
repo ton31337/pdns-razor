@@ -10,12 +10,13 @@ describe "GeoIP" do
     redis_unixsocket = razor_test.redis_unixsocket
     razor_zone = razor_test.razor_zone
     redis = Redis.new(unixsocket: redis_unixsocket)
-    redis.hmset(razor_zone, {
+    key = "#{razor_zone}:CONFIG"
+    redis.hmset(key, {
       "SOA":    "#{razor_zone}. hostmaster.#{razor_zone}. 2023012433 600 600 604800 600",
       "TTL":    60,
       "ANSWER": "geoip",
     })
-    redis.hmget(razor_zone, "ANSWER").should eq(["geoip"])
+    redis.hmget(key, "ANSWER").should eq(["geoip"])
   end
 
   it "Create specific routes (PoP) in Redis" do
@@ -86,13 +87,13 @@ describe "GeoIP" do
     razor.data_from_redis("AAAA", qname, "2a06:4b80::", options).should eq(["2a02:478:1::2"])
   end
 
-  it "Check if we don't crash if quering a default zone" do
+  it "Check if we don't crash and respond if quering a default zone" do
     qname = "example.org"
     razor_test = RazorTest.new
     redis_unixsocket = razor_test.redis_unixsocket
     redis = Redis.new(unixsocket: redis_unixsocket)
     razor = RazorTest.new.razor
     options = razor.mandatory_dns_options(qname)
-    razor.data_from_redis("A", qname, "32.47.115.0", options).should eq([nil])
+    razor.data_from_redis("A", qname, "32.47.115.0", options).should eq(["10.0.2.1"])
   end
 end
