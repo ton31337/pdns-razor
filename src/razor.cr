@@ -9,6 +9,7 @@ require "schedule"
 
 class Razor
   VERSION = {{ read_file("./VERSION").chomp }}
+  NAME = "Razor"
 
   @zone : (String | Nil)
   @geoip_db_checksum : (String | Nil)
@@ -318,9 +319,9 @@ class Razor
     when "TXT"
       ip, continent, country = geoip_content(name, src.includes?(":") ? "AAAA" : "A", src)
       if continent && country
-        ["Razor/#{src} (#{continent}:#{country})/#{ip}"]
+        ["#{NAME}/#{src} (#{continent}:#{country})/#{ip}"]
       else
-        ["Razor/#{src}/#{ip}"]
+        ["#{NAME}/#{src}/#{ip}"]
       end
     else
       case options[:answer_type]
