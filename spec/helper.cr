@@ -39,6 +39,10 @@ class RazorTest
     @razor_zone.to_s
   end
 
+  def soa
+    "#{razor_zone}. hostmaster.#{razor_zone}. 2023012433 600 600 604800 600"
+  end
+
   def razor
     Razor.new(config = @config, context = "test")
   end
