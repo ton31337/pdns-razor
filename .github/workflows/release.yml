@@ -16,12 +16,17 @@ jobs:
       - name: Build image
         run: ./docker/build.sh
 
-      - name: Upload Razor (RockyLinux8) to releases
-        uses: svenstaro/upload-release-action@v2
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./docker/pkgs/razor-rockylinux8
-          asset_name: razor-rockylinux8
-          tag: ${{ github.ref }}
-          overwrite: true
-          body: "This is the automatic release done by Github actions with every new push to the master branch."
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
+          artifacts: ./docker/pkgs/razor-rockylinux8
+          generateReleaseNotes: true
