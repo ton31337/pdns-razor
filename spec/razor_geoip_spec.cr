@@ -12,11 +12,13 @@ describe "GeoIP" do
     redis = Redis.new(unixsocket: redis_unixsocket)
     key = "#{razor_zone}:CONFIG"
     redis.hmset(key, {
-      "SOA":    "#{razor_zone}. hostmaster.#{razor_zone}. 2023012433 600 600 604800 600",
+      "SOA":    razor_test.soa,
       "TTL":    60,
       "ANSWER": "geoip",
     })
+    redis.sadd("#{razor_zone}:NS", "ns1.example.org", "ns2.example.org")
     redis.hmget(key, "ANSWER").should eq(["geoip"])
+    sort(redis.smembers("#{razor_zone}:NS")).should eq(["ns1.example.org", "ns2.example.org"])
   end
 
   it "Create specific routes (PoP) in Redis" do
@@ -95,5 +97,32 @@ describe "GeoIP" do
     razor = RazorTest.new.razor
     options = razor.mandatory_dns_options(qname)
     razor.data_from_redis("A", qname, "32.47.115.0", options).should eq(["10.0.2.1"])
+  end
+
+  it "Check if mandatory DNS record types are returned correctly" do
+    razor_test = RazorTest.new
+    redis_unixsocket = razor_test.redis_unixsocket
+    redis = Redis.new(unixsocket: redis_unixsocket)
+    razor = RazorTest.new.razor
+
+    qname = "donatas.net.cdn.example.org"
+    options = razor.mandatory_dns_options(qname)
+    razor.data_from_redis("SOA", qname, "32.47.115.0", options).should eq([razor_test.soa])
+    sort(razor.data_from_redis("NS", qname, "32.47.115.0", options)).should eq(["ns1.example.org", "ns2.example.org"])
+
+    qname = "net.cdn.example.org"
+    options = razor.mandatory_dns_options(qname)
+    razor.data_from_redis("SOA", qname, "32.47.115.0", options).should eq([razor_test.soa])
+    sort(razor.data_from_redis("NS", qname, "32.47.115.0", options)).should eq(["ns1.example.org", "ns2.example.org"])
+
+    qname = "cdn.example.org"
+    options = razor.mandatory_dns_options(qname)
+    razor.data_from_redis("SOA", qname, "32.47.115.0", options).should eq([razor_test.soa])
+    sort(razor.data_from_redis("NS", qname, "32.47.115.0", options)).should eq(["ns1.example.org", "ns2.example.org"])
+
+    qname = "example.org"
+    options = razor.mandatory_dns_options(qname)
+    razor.data_from_redis("SOA", qname, "32.47.115.0", options).should eq([razor_test.soa])
+    sort(razor.data_from_redis("NS", qname, "32.47.115.0", options)).should eq(["ns1.example.org", "ns2.example.org"])
   end
 end
