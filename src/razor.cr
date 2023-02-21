@@ -6,6 +6,7 @@ require "option_parser"
 require "json"
 require "digest/md5"
 require "schedule"
+require "ipaddress"
 
 class Razor
   VERSION = {{ read_file("shard.yml").lines[1] }}
@@ -228,6 +229,59 @@ class Razor
     ip_int
   end
 
+  def ipv4_get(range, skip_list, seed = UInt8::MAX)
+    ip = IPAddress.new range.to_s
+    random_ip = random_last_octet_get(ip, seed)
+    skip_list.each do |skip_ip|
+      return ipv4_get(range, skip_list, seed) if random_ip == skip_ip
+    end
+    random_ip
+  end
+
+  # Generate only the last 8-bits of random data for IPv4
+  private def random_last_octet_get(ip, seed)
+    ip[3] = rand(seed)
+    ip.address
+  end
+
+  # Get the random IPv6 address from the given range,
+  # and exclude the ones that are listed as skip-list (= blackholed).
+  # This mechanism works only with /48 ranges and checks
+  # are based on /64 ranges.
+  def ipv6_get(range, skip_list, seed = UInt16::MAX)
+    ip = IPAddress.new range.to_s
+    random_ip = random_eui64_get(ip, seed)
+    skip_list.each do |s|
+      skip_ip = IPAddress.new s.to_s
+      return ipv6_get(range, skip_list, seed) if eui64_cmp(random_ip, skip_ip)
+    end
+    random_ip.address
+  end
+
+  # Generate only the last 64-bits of random data
+  private def random_eui64_get(ip, seed)
+    ip[3] = rand(seed)
+    ip[4] = rand(seed)
+    ip[5] = rand(seed)
+    ip[6] = rand(seed)
+    ip[7] = rand(seed)
+    ip
+  end
+
+  # Compare the first 64-bits (EUI-64), and just
+  # ignore the rest of the identifier bits because
+  # most of the DDoS attack-related blackholings
+  # occur using /64, not /128, etc.
+  private def eui64_cmp(ip1, ip2)
+    if ip1[0] == ip2[0] &&
+       ip1[1] == ip2[1] &&
+       ip1[2] == ip2[2] &&
+       ip1[3] == ip2[3]
+      return true
+    end
+    false
+  end
+
   private def ip_hashed(ip, count)
     if ip.includes?(":")
       (ipv6_int(ip) >> (128 - 48)) % count
@@ -244,11 +298,22 @@ class Razor
     @redis.smembers("#{name}:GROUPS") || [] of String
   end
 
+  private def skip_list(qtype)
+    @redis.smembers("#{@zone}:#{qtype}:SKIPLIST")
+  end
+
   # Get random IPv4/IPv6 range from Redis, and then pick the
   # random address from the given range (randomized from Redis).
   private def random_ip_get(qname, qtype)
     ip = @redis.srandmember("#{qname}:#{qtype}")
-    return random_ip_get(qname, qtype) if ip && ip.includes?("/")
+    if ip && ip.includes?("/")
+      case qtype
+      when "AAAA"
+        return ipv6_get(ip, skip_list(qtype))
+      when "A"
+        return ipv4_get(ip, skip_list(qtype))
+      end
+    end
 
     ip
   end
