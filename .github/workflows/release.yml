@@ -30,3 +30,4 @@ jobs:
           body: ${{ steps.tag_version.outputs.changelog }}
           artifacts: ./docker/pkgs/razor-rockylinux8
           generateReleaseNotes: true
+          makeLatest: true
