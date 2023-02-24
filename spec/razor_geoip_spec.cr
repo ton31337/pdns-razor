@@ -99,6 +99,16 @@ describe "GeoIP" do
     razor.data_from_redis("A", qname, "32.47.115.0", options).should eq(["10.0.2.1"])
   end
 
+  it "Check if we respond to a default zone if GeoIP data found, but no continent/country" do
+    qname = "example.org"
+    razor_test = RazorTest.new
+    redis_unixsocket = razor_test.redis_unixsocket
+    redis = Redis.new(unixsocket: redis_unixsocket)
+    razor = RazorTest.new.razor
+    options = razor.mandatory_dns_options(qname)
+    razor.data_from_redis("A", qname, "162.159.24.0", options).should eq(["10.0.0.1"])
+  end
+
   it "Check if mandatory DNS record types are returned correctly" do
     razor_test = RazorTest.new
     redis_unixsocket = razor_test.redis_unixsocket
