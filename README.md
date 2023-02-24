@@ -21,7 +21,7 @@ sudo ./docker/build.sh
 ```
 HMSET node1.route.example.app.io:CONFIG SOA ...
 HMSET node1.route.example.app.io:CONFIG TTL 3600
-SADD node1.route.example.app.io:NS 1.1.1.1 2.2.2.2
+HMSET node1.route.example.app.io:CONFIG NS ns1.example.org,ns2.example.org
 ```
 ## Random
 ```
