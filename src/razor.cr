@@ -177,6 +177,10 @@ class Razor
       rec = @geoip.country(ip)
       continent = rec.continent.code
       country = rec.country.iso_code
+      if !continent || !country
+        @log.warn("No continent/country found for #{ip}")
+        return nil, nil
+      end
     rescue
       @log.warn("GeoIP information not found for #{ip}")
       return nil, nil
