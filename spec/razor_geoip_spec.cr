@@ -13,12 +13,11 @@ describe "GeoIP" do
     key = "#{razor_zone}:CONFIG"
     redis.hmset(key, {
       "SOA":    razor_test.soa,
+      "NS":     "ns1.example.org,ns2.example.org",
       "TTL":    60,
       "ANSWER": "geoip",
     })
-    redis.sadd("#{razor_zone}:NS", "ns1.example.org", "ns2.example.org")
     redis.hmget(key, "ANSWER").should eq(["geoip"])
-    sort(redis.smembers("#{razor_zone}:NS")).should eq(["ns1.example.org", "ns2.example.org"])
   end
 
   it "Create specific routes (PoP) in Redis" do
@@ -118,21 +117,21 @@ describe "GeoIP" do
     qname = "donatas.net.cdn.example.org"
     options = razor.mandatory_dns_options(qname)
     razor.data_from_redis("SOA", qname, "32.47.115.0", options).should eq([razor_test.soa])
-    sort(razor.data_from_redis("NS", qname, "32.47.115.0", options)).should eq(["ns1.example.org", "ns2.example.org"])
+    razor.data_from_redis("NS", qname, "32.47.115.0", options).should eq(["ns1.example.org", "ns2.example.org"])
 
     qname = "net.cdn.example.org"
     options = razor.mandatory_dns_options(qname)
     razor.data_from_redis("SOA", qname, "32.47.115.0", options).should eq([razor_test.soa])
-    sort(razor.data_from_redis("NS", qname, "32.47.115.0", options)).should eq(["ns1.example.org", "ns2.example.org"])
+    razor.data_from_redis("NS", qname, "32.47.115.0", options).should eq(["ns1.example.org", "ns2.example.org"])
 
     qname = "cdn.example.org"
     options = razor.mandatory_dns_options(qname)
     razor.data_from_redis("SOA", qname, "32.47.115.0", options).should eq([razor_test.soa])
-    sort(razor.data_from_redis("NS", qname, "32.47.115.0", options)).should eq(["ns1.example.org", "ns2.example.org"])
+    razor.data_from_redis("NS", qname, "32.47.115.0", options).should eq(["ns1.example.org", "ns2.example.org"])
 
     qname = "example.org"
     options = razor.mandatory_dns_options(qname)
     razor.data_from_redis("SOA", qname, "32.47.115.0", options).should eq([razor_test.soa])
-    sort(razor.data_from_redis("NS", qname, "32.47.115.0", options)).should eq(["ns1.example.org", "ns2.example.org"])
+    razor.data_from_redis("NS", qname, "32.47.115.0", options).should eq(["ns1.example.org", "ns2.example.org"])
   end
 end

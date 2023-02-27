@@ -162,7 +162,7 @@ class Razor
     soa, ns, ttl, answer_type = @redis.hmget("#{name}:CONFIG", "SOA", "NS", "TTL", "ANSWER")
     {
       soa:         soa,
-      ns:          ns,
+      ns:          ns.to_s.delete(" ").split(","),
       ttl:         ttl || 60,
       answer_type: answer_type || "random",
     }
@@ -318,8 +318,7 @@ class Razor
     when "SOA"
       [options[:soa]]
     when "NS"
-      name = @zone || name
-      @redis.smembers("#{name}:#{qtype}")
+      options[:ns]
     when "TXT"
       ip, continent, country = geoip_content(name, src.includes?(":") ? "AAAA" : "A", src)
       if continent && country
