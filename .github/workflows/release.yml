@@ -16,7 +16,7 @@ jobs:
       - name: Custom variables
         id: vars
         run: |
-          echo ::set-output name=version::$(cat VERSION)
+          echo ::set-output name=version::$(awk -F : 'NR==2 { gsub(/ /, ""); print $2 }' shard.yml)
 
       - name: Build image
         run: ./docker/build.sh

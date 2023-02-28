@@ -8,7 +8,7 @@ require "digest/md5"
 require "schedule"
 
 class Razor
-  VERSION = {{ read_file("./VERSION").chomp }}
+  VERSION = {{ read_file("shard.yml").lines[1] }}
   NAME    = "Razor"
 
   @zone : (String | Nil)
