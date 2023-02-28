@@ -9,7 +9,7 @@ require "schedule"
 
 class Razor
   VERSION = {{ read_file("./VERSION").chomp }}
-  NAME = "Razor"
+  NAME    = "Razor"
 
   @zone : (String | Nil)
   @geoip_db_checksum : (String | Nil)
@@ -279,7 +279,7 @@ class Razor
     # check by continent.
     # Moreover, even if the continent does not exist, then
     # return random IP from the default zone:A, zone:AAAA.
-    route : (String | Nil) = nil
+    route : (Redis::RedisValue | String | Nil) = nil
     continent : (String | Nil) = nil
     country : (String | Nil) = nil
 
@@ -296,11 +296,12 @@ class Razor
         continent, country = geoip_data(src)
       end
 
+      # Fetch continent:country and continent in batched mode (MGET),
+      # to save one additional request to Redis.
       if continent && country
-        route = @redis.get("geoip:#{continent.downcase}:#{country.downcase}")
-        unless route
-          route = @redis.get("geoip:#{continent.downcase}")
-        end
+        route_country, route_continent = @redis.mget("geoip:#{continent.downcase}:#{country.downcase}",
+          "geoip:#{continent.downcase}")
+        route = route_country || route_continent
       elsif continent
         route = @redis.get("geoip:#{continent.downcase}")
       end
