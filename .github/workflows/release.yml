@@ -10,13 +10,13 @@ jobs:
     name: Compile and release
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Custom variables
         id: vars
         run: |
           echo ::set-output name=version::$(cat VERSION)
-
-      - name: Checkout
-        uses: actions/checkout@v3
 
       - name: Build image
         run: ./docker/build.sh
