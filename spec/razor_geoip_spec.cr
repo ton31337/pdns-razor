@@ -33,6 +33,8 @@ describe "GeoIP" do
     redis.sadd("lt-bnk2.routes.example.org:AAAA", "2a02:478:1::2")
     redis.sadd("us-phx1.routes.example.org:A", "10.0.2.1")
     redis.sadd("us-phx1.routes.example.org:AAAA", "2a02:4780:2::1")
+    redis.sadd("sg-nme1.routes.example.org:A", "10.0.3.1")
+    redis.sadd("sg-nme1.routes.example.org:AAAA", "2a02:4780:3::1")
     sort(redis.smembers("#{razor_zone}:A")).should eq(["10.0.0.1"])
     sort(redis.smembers("#{razor_zone}:AAAA")).should eq(["2a02:4780::1"])
     redis.srandmember("lt-bnk1.routes.example.org:A").should eq("10.0.1.1")
@@ -46,6 +48,8 @@ describe "GeoIP" do
     redis.set("geoip:eu:lt", "lt-bnk1.routes.example.org")
     redis.set("geoip:eu", "lt-bnk2.routes.example.org")
     redis.set("geoip:na", "us-phx1.routes.example.org")
+    redis.set("geoip:as", "sg-nme1.routes.example.org")
+    redis.get("geoip:as").should eq("sg-nme1.routes.example.org")
     redis.get("geoip:na").should eq("us-phx1.routes.example.org")
     redis.get("geoip:eu:lt").should eq("lt-bnk1.routes.example.org")
   end
@@ -106,6 +110,16 @@ describe "GeoIP" do
     razor = RazorTest.new.razor
     options = razor.mandatory_dns_options(qname)
     razor.data_from_redis("A", qname, "162.159.24.0", options).should eq(["10.0.0.1"])
+  end
+
+  it "Check if we respond to geo:<continent> if GeoIP country is not found" do
+    qname = "donatas.net.cdn.example.org"
+    razor_test = RazorTest.new
+    redis_unixsocket = razor_test.redis_unixsocket
+    redis = Redis.new(unixsocket: redis_unixsocket)
+    razor = RazorTest.new.razor
+    options = razor.mandatory_dns_options(qname)
+    razor.data_from_redis("A", qname, "66.249.82.0", options).should eq(["10.0.3.1"])
   end
 
   it "Check if mandatory DNS record types are returned correctly" do
