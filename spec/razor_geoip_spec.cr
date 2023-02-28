@@ -17,6 +17,8 @@ describe "GeoIP" do
       "TTL":    60,
       "ANSWER": "geoip",
     })
+    redis.sadd("#{razor_zone}:A:SKIPLIST", "192.168.0.1")
+    redis.sadd("#{razor_zone}:AAAA:SKIPLIST", "2a02:4780:100::/64")
     redis.hmget(key, "ANSWER").should eq(["geoip"])
   end
 
