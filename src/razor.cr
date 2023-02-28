@@ -177,10 +177,11 @@ class Razor
       rec = @geoip.country(ip)
       continent = rec.continent.code
       country = rec.country.iso_code
-      if !continent || !country
+      if !continent && !country
         @log.warn("No continent/country found for #{ip}")
         return nil, nil
       end
+      return continent, country
     rescue
       @log.warn("GeoIP information not found for #{ip}")
       return nil, nil
@@ -300,6 +301,8 @@ class Razor
         unless route
           route = @redis.get("geoip:#{continent.downcase}")
         end
+      elsif continent
+        route = @redis.get("geoip:#{continent.downcase}")
       end
 
       if route
