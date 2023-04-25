@@ -1,5 +1,6 @@
 shard.lock
 lib/
 .shards/
+*.swp
 razor
 docker/pkgs/razor-*

@@ -25,7 +25,7 @@ describe "GeoIP" do
     redis_unixsocket = razor_test.redis_unixsocket
     razor_zone = razor_test.razor_zone
     redis = Redis.new(unixsocket: redis_unixsocket)
-    redis.sadd("#{razor_zone}:A", "10.0.0.1")
+    redis.sadd("#{razor_zone}:A", "10.0.0.1", "192.168.0.0/24")
     redis.sadd("#{razor_zone}:AAAA", "2a02:4780::1")
     redis.sadd("lt-bnk1.routes.example.org:A", "10.0.1.1")
     redis.sadd("lt-bnk1.routes.example.org:AAAA", "2a02:478:1::1")
@@ -35,7 +35,7 @@ describe "GeoIP" do
     redis.sadd("us-phx1.routes.example.org:AAAA", "2a02:4780:2::1")
     redis.sadd("sg-nme1.routes.example.org:A", "10.0.3.1")
     redis.sadd("sg-nme1.routes.example.org:AAAA", "2a02:4780:3::1")
-    sort(redis.smembers("#{razor_zone}:A")).should eq(["10.0.0.1"])
+    sort(redis.smembers("#{razor_zone}:A")).should eq(["10.0.0.1", "192.168.0.0/24"])
     sort(redis.smembers("#{razor_zone}:AAAA")).should eq(["2a02:4780::1"])
     redis.srandmember("lt-bnk1.routes.example.org:A").should eq("10.0.1.1")
     redis.srandmember("us-phx1.routes.example.org:AAAA").should eq("2a02:4780:2::1")

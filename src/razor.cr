@@ -244,6 +244,15 @@ class Razor
     @redis.smembers("#{name}:GROUPS") || [] of String
   end
 
+  # Get random IPv4/IPv6 range from Redis, and then pick the
+  # random address from the given range (randomized from Redis).
+  private def random_ip_get(qname, qtype)
+    ip = @redis.srandmember("#{qname}:#{qtype}")
+    return random_ip_get(qname, qtype) if ip && ip.includes?("/")
+
+    ip
+  end
+
   private def ch_content(name, src)
     count = servers_count(name)
     return if count == 0
@@ -307,14 +316,14 @@ class Razor
       end
 
       if route
-        return @redis.srandmember("#{route}:#{qtype}"), continent, country
+        return random_ip_get(route, qtype), continent, country
       end
     rescue Redis::Error
       @log.error("Something went wrong, key: '#{qname}:#{qtype}', src: #{src}")
     end
 
     # If GeoIP is skipped, return more specific PoP or the default @zone
-    return @redis.srandmember("#{name}:#{qtype}"), nil, nil
+    return random_ip_get(name, qtype), nil, nil
   end
 
   def data_from_redis(qtype, name, src, options)
@@ -333,7 +342,7 @@ class Razor
     else
       case options[:answer_type]
       when "random"
-        [@redis.srandmember("#{name}:#{qtype}")]
+        [random_ip_get(name, qtype)]
       when "consistent_hash"
         [ch_content("#{name}:#{qtype}", src)]
       when "group_consistent_hash"
