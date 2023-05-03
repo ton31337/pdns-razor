@@ -1,0 +1,30 @@
+version: 2.0
+shards:
+  future:
+    git: https://github.com/crystal-community/future.cr.git
+    version: 1.0.0
+
+  geoip2:
+    git: https://github.com/delef/geoip2.cr.git
+    version: 0.5.3
+
+  ipaddress:
+    git: https://github.com/sija/ipaddress.cr.git
+    version: 0.2.1
+
+  logger:
+    git: https://github.com/84codes/logger.cr.git
+    version: 1.0.2
+
+  maxminddb:
+    git: https://github.com/delef/maxminddb.cr.git
+    version: 1.5.0
+
+  redis:
+    git: https://github.com/stefanwille/crystal-redis.git
+    version: 1.9.0
+
+  schedule:
+    git: https://github.com/hugoabonizio/schedule.cr.git
+    version: 0.2.2
+

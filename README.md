@@ -60,6 +60,31 @@ SET geoip:eu:lt node1.route.example.app.io
 SET geoip:eu node2.route.example.app.io
 ```
 
+## Specifying IPv4/IPv6 ranges instead of plain hosts
+
+You can specify the whole range like:
+```
+SADD routes.example.org:A 192.168.1.0/24 192.168.2.0/24
+SADD routes.example.org:AAAA 2a02:4780:1::/48 2a02:4780:2::/48
+```
+
+And the Razor automatically picks up a random IPv4/IPv6 address from those ranges.
+
+_Current limitation is that IPv4 subnet MUST be /24, and IPv6 /48_.
+
+With this feature, you also have the ability to skip some specific hosts from being
+returned by Razor to the client. It's called SKIPLIST. You define:
+```
+SADD example.org:A:SKIPLIST 192.168.1.100 192.168.2.255
+SADD example.org:AAAA:SKIPLIST 2a02:4780:1:100::/64 2a02:4780:2:255::/64
+```
+
+Skip lists work by checking /32 for IPv4, and /64 for IPv6 addresses.
+
+In this example, if the Razor picks the random IPv6 from 2a02:4780:2::/48, and
+2a02:4780:2:255::/64 is defined as a skip-list item, then Razor picks another one
+that is not _blocklisted_.
+
 # Tests
 ```
 # dnsperf -d data -n 10000

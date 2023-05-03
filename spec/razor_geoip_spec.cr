@@ -17,6 +17,8 @@ describe "GeoIP" do
       "TTL":    60,
       "ANSWER": "geoip",
     })
+    redis.sadd("#{razor_zone}:A:SKIPLIST", "192.168.0.1")
+    redis.sadd("#{razor_zone}:AAAA:SKIPLIST", "2a02:4780:4:1::/64")
     redis.hmget(key, "ANSWER").should eq(["geoip"])
   end
 
@@ -26,7 +28,7 @@ describe "GeoIP" do
     razor_zone = razor_test.razor_zone
     redis = Redis.new(unixsocket: redis_unixsocket)
     redis.sadd("#{razor_zone}:A", "10.0.0.1", "192.168.0.0/24")
-    redis.sadd("#{razor_zone}:AAAA", "2a02:4780::1")
+    redis.sadd("#{razor_zone}:AAAA", "2a02:4780::1", "2a02:4780:4::/48")
     redis.sadd("lt-bnk1.routes.example.org:A", "10.0.1.1")
     redis.sadd("lt-bnk1.routes.example.org:AAAA", "2a02:478:1::1")
     redis.sadd("lt-bnk2.routes.example.org:A", "10.0.1.2")
@@ -36,7 +38,7 @@ describe "GeoIP" do
     redis.sadd("sg-nme1.routes.example.org:A", "10.0.3.1")
     redis.sadd("sg-nme1.routes.example.org:AAAA", "2a02:4780:3::1")
     sort(redis.smembers("#{razor_zone}:A")).should eq(["10.0.0.1", "192.168.0.0/24"])
-    sort(redis.smembers("#{razor_zone}:AAAA")).should eq(["2a02:4780::1"])
+    sort(redis.smembers("#{razor_zone}:AAAA")).should eq(["2a02:4780:4::/48", "2a02:4780::1"])
     redis.srandmember("lt-bnk1.routes.example.org:A").should eq("10.0.1.1")
     redis.srandmember("us-phx1.routes.example.org:AAAA").should eq("2a02:4780:2::1")
   end
@@ -55,9 +57,14 @@ describe "GeoIP" do
   end
 
   it "Check if GeoDNS returns proper pools by source address" do
-    razor = RazorTest.new.razor
     qname = "donatas.net.cdn.example.org"
+    razor_test = RazorTest.new
+    razor = razor_test.razor
     options = razor.mandatory_dns_options(qname)
+    redis_unixsocket = razor_test.redis_unixsocket
+    razor_zone = razor_test.razor_zone
+    redis = Redis.new(unixsocket: redis_unixsocket)
+    redis.del(qname)
 
     # Lithuania gets IPs from lt-bnk1.routes.example.org pool
     razor.data_from_redis("A", qname, "193.219.39.234", options).should eq(["10.0.1.1"])
@@ -72,12 +79,12 @@ describe "GeoIP" do
     razor.data_from_redis("AAAA", qname, "2a0d:d900::", options).should eq(["2a02:4780:2::1"])
 
     # Others gets IPs from cdn.example.org pool
-    razor.data_from_redis("A", qname, "102.164.115.0", options).should eq(["10.0.0.1"])
-    razor.data_from_redis("AAAA", qname, "2a06:4b80::", options).should eq(["2a02:4780::1"])
+    razor.data_from_redis("A", qname, "102.164.115.0", options).first.to_s.should match(/(192\.168\.0\.\d+|10.0.0.1)/)
+    razor.data_from_redis("AAAA", qname, "2a06:4b80::", options).first.to_s.should match(/(2a02:4780::1|2a02:4780:0004:)/)
 
     # Others gets IPs from cdn.example.org pool, not found in GeoIP database
-    razor.data_from_redis("A", qname, "127.0.0.1", options).should eq(["10.0.0.1"])
-    razor.data_from_redis("AAAA", qname, "::1", options).should eq(["2a02:4780::1"])
+    razor.data_from_redis("A", qname, "127.0.0.1", options).first.to_s.should match(/(192\.168\.0\.\d+|10.0.0.1)/)
+    razor.data_from_redis("AAAA", qname, "::1", options).first.to_s.should match(/(2a02:4780::1|2a02:4780:0004:)/)
   end
 
   it "Check if specific domains are sticked to an arbitrary PoP" do
@@ -109,7 +116,7 @@ describe "GeoIP" do
     redis = Redis.new(unixsocket: redis_unixsocket)
     razor = RazorTest.new.razor
     options = razor.mandatory_dns_options(qname)
-    razor.data_from_redis("A", qname, "162.159.24.0", options).should eq(["10.0.0.1"])
+    razor.data_from_redis("A", qname, "162.159.24.0", options).first.to_s.should match(/(192\.168\.0\.\d+|10.0.0.1)/)
   end
 
   it "Check if we respond to geo:<continent> if GeoIP country is not found" do

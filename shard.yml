@@ -1,5 +1,5 @@
 name: pdns-razor
-version: 0.4.3
+version: 0.5.0
 
 dependencies:
   redis:
@@ -11,5 +11,7 @@ dependencies:
     github: delef/geoip2.cr
   schedule:
     github: hugoabonizio/schedule.cr
+  ipaddress:
+    github: sija/ipaddress.cr
 
 license: BSD
