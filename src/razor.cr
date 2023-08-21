@@ -120,11 +120,14 @@ class Razor
         }
         answer(hash_source, options)
       when "ANY"
+        extra = {
+          :zone => @redis.get(qname),
+        }
         # If debug is enabled, query backend for TXT records
         # additionally.
         @types = %w(SOA NS AAAA A TXT) if @debug
         @types.each do |type|
-          data_from_redis(type, qname, hash_source, mandatory_options).each do |response|
+          data_from_redis(type, qname, hash_source, mandatory_options, extra).each do |response|
             options = {
               :name    => qname,
               :type    => type,
@@ -330,7 +333,7 @@ class Razor
     @redis.srandmember("#{groups[hash]}:#{qtype}")
   end
 
-  private def geoip_content(qname, qtype, src)
+  private def geoip_content(qname, qtype, src, extra = {} of Symbol => String)
     # Process GeoIP here, and return the pool by the
     # country/continent.
     # In Redis, the keys MUST keep the following encoding:
@@ -362,9 +365,8 @@ class Razor
     # like:
     #   SET donatas.net.<default_zone> uk1.routes.example.net
     begin
-      r_name = @redis.get(qname)
-      if r_name
-        name = r_name
+      if extra.has_key?(:zone)
+        name = extra[:zone]
       else
         name = @zone || qname
         continent, country = geoip_data(src)
@@ -391,14 +393,14 @@ class Razor
     return random_ip_get(name, qtype), nil, nil
   end
 
-  def data_from_redis(qtype, name, src, options)
+  def data_from_redis(qtype, qname, src, options, extra = {} of Symbol => String)
     case qtype
     when "SOA"
       [options[:soa]]
     when "NS"
       options[:ns]
     when "TXT"
-      ip, continent, country = geoip_content(name, src.includes?(":") ? "AAAA" : "A", src)
+      ip, continent, country = geoip_content(qname, src.includes?(":") ? "AAAA" : "A", src, extra)
       if continent && country
         ["#{NAME}/#{src} (#{continent}:#{country})/#{ip}"]
       else
@@ -407,13 +409,13 @@ class Razor
     else
       case options[:answer_type]
       when "random"
-        [random_ip_get(name, qtype)]
+        [random_ip_get(qname, qtype)]
       when "consistent_hash"
-        [ch_content("#{name}:#{qtype}", src)]
+        [ch_content("#{qname}:#{qtype}", src)]
       when "group_consistent_hash"
-        [gch_content(qtype, to_sorted_array_of_string(dns_groups(name)), src)]
+        [gch_content(qtype, to_sorted_array_of_string(dns_groups(qname)), src)]
       when "geoip"
-        ip, _, _ = geoip_content(name, qtype, src)
+        ip, _, _ = geoip_content(qname, qtype, src, extra)
         [ip]
       else
         [] of String
