@@ -34,6 +34,6 @@ jobs:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: Release ${{ steps.tag_version.outputs.new_tag }}
           body: ${{ steps.tag_version.outputs.changelog }}
-          artifacts: ./docker/pkgs/razor-rockylinux8
+          artifacts: ./docker/pkgs/razor-rockylinux8,./docker/pkgs/razor-debian11
           generateReleaseNotes: true
           makeLatest: true
