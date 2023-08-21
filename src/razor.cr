@@ -15,7 +15,7 @@ class Razor
   @zone : (String | Nil)
   @geoip_db_checksum : (String | Nil)
 
-  def initialize(config = "/etc/pdns/razor.json", context = "production")
+  def initialize(config = "/etc/pdns-razor/razor.json", context = "production")
     @config = config
     @context = context
     @banner = "Razor DNS backend"
