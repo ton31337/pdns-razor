@@ -8,6 +8,7 @@ describe "Tracing" do
     razor.data_from_redis("TXT", qname, "32.47.115.0", options, {
       :continent => "na",
       :country   => "us",
+      :route     => "us-phx1.routes.example.org",
     }).should eq(["Razor/32.47.115.0 (na:us)/10.0.2.1"])
   end
 

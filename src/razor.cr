@@ -125,6 +125,7 @@ class Razor
           :zone      => @redis.get(qname),
           :continent => continent,
           :country   => country,
+          :route     => geoip_route(continent, country),
         }
         # If debug is enabled, query backend for TXT records
         # additionally.
@@ -352,7 +353,15 @@ class Razor
     country
   end
 
-  private def geoip_content(qname, qtype, src, extra)
+  private def geoip_route_get(extra)
+    route = nil
+    if extra.has_key?(:route)
+      route = extra[:route]
+    end
+    route
+  end
+
+  private def geoip_route(continent, country)
     # Process GeoIP here, and return the pool by the
     # country/continent.
     # In Redis, the keys MUST keep the following encoding:
@@ -373,25 +382,11 @@ class Razor
     # The first request checks if we can return A/AAAA from
     # the pool which is under the country. If not found, then
     # check by continent.
-    # Moreover, even if the continent does not exist, then
-    # return random IP from the default zone:A, zone:AAAA.
     route : (Redis::RedisValue | String | Nil) = nil
-    continent = geoip_continent_get(extra)
-    country = geoip_country_get(extra)
 
-    # If we want to stick specific qname to an arbitrary PoP
-    # instead of relying on GeoIP data, just create a key in Redis
-    # like:
-    #   SET donatas.net.<default_zone> uk1.routes.example.net
+    # Fetch continent:country and continent in batched mode (MGET),
+    # to save one additional request to Redis.
     begin
-      if extra.has_key?(:zone)
-        name = extra[:zone]
-      else
-        name = @zone || qname
-      end
-
-      # Fetch continent:country and continent in batched mode (MGET),
-      # to save one additional request to Redis.
       if continent && country
         route_country, route_continent = @redis.mget("geoip:#{continent.downcase}:#{country.downcase}",
           "geoip:#{continent.downcase}")
@@ -399,13 +394,28 @@ class Razor
       elsif continent
         route = @redis.get("geoip:#{continent.downcase}")
       end
-
-      if route
-        return random_ip_get(route, qtype)
-      end
     rescue Redis::Error
-      @log.error("Something went wrong, key: '#{qname}:#{qtype}', src: #{src}")
+      @log.error("Something went wrong, can't get route by GeoIP #{continent}:#{country}")
     end
+
+    route
+  end
+
+  private def geoip_content(qname, qtype, src, extra)
+    route = geoip_route_get(extra)
+
+    # If we want to stick specific qname to an arbitrary PoP
+    # instead of relying on GeoIP data, just create a key in Redis
+    # like:
+    #   SET donatas.net.<default_zone> uk1.routes.example.net
+    if extra.has_key?(:zone)
+      name = extra[:zone]
+    else
+      name = @zone || qname
+    end
+
+    # GeoIP returned a route by continent/country
+    return random_ip_get(route, qtype) if route
 
     # If GeoIP is skipped, return more specific PoP or the default @zone
     return random_ip_get(name, qtype)
