@@ -120,11 +120,18 @@ class Razor
         }
         answer(hash_source, options)
       when "ANY"
+        continent, country = geoip_data(hash_source)
+        extra = {
+          :zone      => @redis.get(qname),
+          :continent => continent,
+          :country   => country,
+          :route     => geoip_route(continent, country),
+        }
         # If debug is enabled, query backend for TXT records
         # additionally.
         @types = %w(SOA NS AAAA A TXT) if @debug
         @types.each do |type|
-          data_from_redis(type, qname, hash_source, mandatory_options).each do |response|
+          data_from_redis(type, qname, hash_source, mandatory_options, extra).each do |response|
             options = {
               :name    => qname,
               :type    => type,
@@ -330,7 +337,31 @@ class Razor
     @redis.srandmember("#{groups[hash]}:#{qtype}")
   end
 
-  private def geoip_content(qname, qtype, src)
+  private def geoip_continent_get(extra)
+    continent = nil
+    if extra.has_key?(:continent)
+      continent = extra[:continent]
+    end
+    continent
+  end
+
+  private def geoip_country_get(extra)
+    country = nil
+    if extra.has_key?(:country)
+      country = extra[:country]
+    end
+    country
+  end
+
+  private def geoip_route_get(extra)
+    route = nil
+    if extra.has_key?(:route)
+      route = extra[:route]
+    end
+    route
+  end
+
+  private def geoip_route(continent, country)
     # Process GeoIP here, and return the pool by the
     # country/continent.
     # In Redis, the keys MUST keep the following encoding:
@@ -351,27 +382,11 @@ class Razor
     # The first request checks if we can return A/AAAA from
     # the pool which is under the country. If not found, then
     # check by continent.
-    # Moreover, even if the continent does not exist, then
-    # return random IP from the default zone:A, zone:AAAA.
     route : (Redis::RedisValue | String | Nil) = nil
-    continent : (String | Nil) = nil
-    country : (String | Nil) = nil
 
-    # If we want to stick specific qname to an arbitrary PoP
-    # instead of relying on GeoIP data, just create a key in Redis
-    # like:
-    #   SET donatas.net.<default_zone> uk1.routes.example.net
+    # Fetch continent:country and continent in batched mode (MGET),
+    # to save one additional request to Redis.
     begin
-      r_name = @redis.get(qname)
-      if r_name
-        name = r_name
-      else
-        name = @zone || qname
-        continent, country = geoip_data(src)
-      end
-
-      # Fetch continent:country and continent in batched mode (MGET),
-      # to save one additional request to Redis.
       if continent && country
         route_country, route_continent = @redis.mget("geoip:#{continent.downcase}:#{country.downcase}",
           "geoip:#{continent.downcase}")
@@ -379,26 +394,44 @@ class Razor
       elsif continent
         route = @redis.get("geoip:#{continent.downcase}")
       end
-
-      if route
-        return random_ip_get(route, qtype), continent, country
-      end
     rescue Redis::Error
-      @log.error("Something went wrong, key: '#{qname}:#{qtype}', src: #{src}")
+      @log.error("Something went wrong, can't get route by GeoIP #{continent}:#{country}")
     end
 
-    # If GeoIP is skipped, return more specific PoP or the default @zone
-    return random_ip_get(name, qtype), nil, nil
+    route
   end
 
-  def data_from_redis(qtype, name, src, options)
+  private def geoip_content(qname, qtype, src, extra)
+    route = geoip_route_get(extra)
+
+    # If we want to stick specific qname to an arbitrary PoP
+    # instead of relying on GeoIP data, just create a key in Redis
+    # like:
+    #   SET donatas.net.<default_zone> uk1.routes.example.net
+    if extra.has_key?(:zone)
+      name = extra[:zone]
+    else
+      name = @zone || qname
+    end
+
+    # GeoIP returned a route by continent/country
+    return random_ip_get(route, qtype) if route
+
+    # If GeoIP is skipped, return more specific PoP or the default @zone
+    return random_ip_get(name, qtype)
+  end
+
+  def data_from_redis(qtype, qname, src, options, extra = {} of Symbol => String)
+    continent = geoip_continent_get(extra)
+    country = geoip_country_get(extra)
+
     case qtype
     when "SOA"
       [options[:soa]]
     when "NS"
       options[:ns]
     when "TXT"
-      ip, continent, country = geoip_content(name, src.includes?(":") ? "AAAA" : "A", src)
+      ip = geoip_content(qname, src.includes?(":") ? "AAAA" : "A", src, extra)
       if continent && country
         ["#{NAME}/#{src} (#{continent}:#{country})/#{ip}"]
       else
@@ -407,14 +440,13 @@ class Razor
     else
       case options[:answer_type]
       when "random"
-        [random_ip_get(name, qtype)]
+        [random_ip_get(qname, qtype)]
       when "consistent_hash"
-        [ch_content("#{name}:#{qtype}", src)]
+        [ch_content("#{qname}:#{qtype}", src)]
       when "group_consistent_hash"
-        [gch_content(qtype, to_sorted_array_of_string(dns_groups(name)), src)]
+        [gch_content(qtype, to_sorted_array_of_string(dns_groups(qname)), src)]
       when "geoip"
-        ip, _, _ = geoip_content(name, qtype, src)
-        [ip]
+        [geoip_content(qname, qtype, src, extra)]
       else
         [] of String
       end
