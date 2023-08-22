@@ -32,7 +32,7 @@ describe "IP range random generation from the list" do
   it "Create specific routes (PoP) in Redis using IPv4/IPv6 ranges" do
     qname = "donatas.net.cdn.example.org"
     extra = {
-      :zone => "lt-bnk3.routes.example.org"
+      :zone => "lt-bnk3.routes.example.org",
     }
     razor_test = RazorTest.new
     redis_unixsocket = razor_test.redis_unixsocket
@@ -43,7 +43,7 @@ describe "IP range random generation from the list" do
     redis.sadd("lt-bnk3.routes.example.org:A", "192.168.0.0/24")
     redis.sadd("lt-bnk3.routes.example.org:AAAA", "2a02:4780:100::/48")
     redis.set(qname, extra[:zone])
-    razor.data_from_redis("A", qname, "102.164.115.0", options, extra).first.to_s.should contain("192\.168\.0\.")
+    razor.data_from_redis("A", qname, "102.164.115.0", options, extra).first.to_s.should contain("192.168.0.")
     razor.data_from_redis("AAAA", qname, "2a06:4b80::", options, extra).first.to_s.should contain("2a02:4780:0100:")
   end
 end

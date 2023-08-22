@@ -67,16 +67,34 @@ describe "GeoIP" do
     redis.del(qname)
 
     # Lithuania gets IPs from lt-bnk1.routes.example.org pool
-    razor.data_from_redis("A", qname, "193.219.39.234", options).should eq(["10.0.1.1"])
-    razor.data_from_redis("AAAA", qname, "2a03:1960::", options).should eq(["2a02:478:1::1"])
+    razor.data_from_redis("A", qname, "193.219.39.234", options, {
+      :continent => "eu",
+      :country   => "lt",
+    }).should eq(["10.0.1.1"])
+    razor.data_from_redis("AAAA", qname, "2a03:1960::", options, {
+      :continent => "eu",
+      :country   => "lt",
+    }).should eq(["2a02:478:1::1"])
 
     # United Kingdom gets IPs from lt-bnk2.routes.examle.org pool
-    razor.data_from_redis("A", qname, "31.170.164.0", options).should eq(["10.0.1.2"])
-    razor.data_from_redis("AAAA", qname, "2a02:8800::", options).should eq(["2a02:478:1::2"])
+    razor.data_from_redis("A", qname, "31.170.164.0", options, {
+      :continent => "eu",
+      :country   => "gb",
+    }).should eq(["10.0.1.2"])
+    razor.data_from_redis("AAAA", qname, "2a02:8800::", options, {
+      :continent => "eu",
+      :country   => "gb",
+    }).should eq(["2a02:478:1::2"])
 
     # United States gets IPs from us-phx1.routes.example.org pool
-    razor.data_from_redis("A", qname, "32.47.115.0", options).should eq(["10.0.2.1"])
-    razor.data_from_redis("AAAA", qname, "2a0d:d900::", options).should eq(["2a02:4780:2::1"])
+    razor.data_from_redis("A", qname, "32.47.115.0", options, {
+      :continent => "na",
+      :country   => "us",
+    }).should eq(["10.0.2.1"])
+    razor.data_from_redis("AAAA", qname, "2a0d:d900::", options, {
+      :continent => "na",
+      :country   => "us",
+    }).should eq(["2a02:4780:2::1"])
 
     # Others gets IPs from cdn.example.org pool
     razor.data_from_redis("A", qname, "102.164.115.0", options).first.to_s.should match(/(192\.168\.0\.\d+|10.0.0.1)/)
@@ -90,7 +108,7 @@ describe "GeoIP" do
   it "Check if specific domains are sticked to an arbitrary PoP" do
     qname = "donatas1.net.cdn.example.org"
     extra = {
-      :zone => "lt-bnk2.routes.example.org"
+      :zone => "lt-bnk2.routes.example.org",
     }
     razor_test = RazorTest.new
     redis_unixsocket = razor_test.redis_unixsocket
@@ -109,7 +127,10 @@ describe "GeoIP" do
     redis = Redis.new(unixsocket: redis_unixsocket)
     razor = RazorTest.new.razor
     options = razor.mandatory_dns_options(qname)
-    razor.data_from_redis("A", qname, "32.47.115.0", options).should eq(["10.0.2.1"])
+    razor.data_from_redis("A", qname, "32.47.115.0", options, {
+      :continent => "na",
+      :country   => "us",
+    }).should eq(["10.0.2.1"])
   end
 
   it "Check if we respond to a default zone if GeoIP data found, but no continent/country" do
@@ -129,7 +150,10 @@ describe "GeoIP" do
     redis = Redis.new(unixsocket: redis_unixsocket)
     razor = RazorTest.new.razor
     options = razor.mandatory_dns_options(qname)
-    razor.data_from_redis("A", qname, "66.249.82.0", options).should eq(["10.0.3.1"])
+    razor.data_from_redis("A", qname, "66.249.82.0", options, {
+      :continent => "as",
+      :country   => nil,
+    }).should eq(["10.0.3.1"])
   end
 
   it "Check if mandatory DNS record types are returned correctly" do
