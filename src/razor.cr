@@ -179,7 +179,9 @@ class Razor
       continent = rec.continent.code
       country = rec.country.iso_code
       if !continent && !country
-        @log.warn("No continent/country found for #{ip}")
+        if @debug
+          @log.warn("No continent/country found for #{ip}")
+        end
         return nil, nil
       end
       return continent, country
